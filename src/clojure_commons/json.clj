@@ -1,6 +1,5 @@
 (ns clojure-commons.json
-  (:use clojure.contrib.json
-        [clojure.contrib.duck-streams :only (slurp*)]))
+  (:use clojure.data.json))
 
 ;;; Things to make working with POSTs/PUTs easier
 (defonce json-mime-type "application/json")
@@ -12,4 +11,4 @@
   ([body]
      (body->json body true))
   ([body keywordize?]
-     (string->json (slurp* body) keywordize?)))
+     (string->json (slurp body) keywordize?)))

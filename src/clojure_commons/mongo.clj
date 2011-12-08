@@ -1,6 +1,5 @@
 (ns clojure-commons.mongo
-  (:use    [clojure.contrib.string :only (as-str)]
-	   [clojure.contrib.json :only (read-json)])
+  (:use    [clojure.data.json :only (read-json)])
   (:import [com.mongodb Mongo DB DBCollection BasicDBObject DBCursor]))
 
 ;;; Object translations
@@ -10,14 +9,14 @@
   (let [result (BasicDBObject.)]
     (doseq [key (keys my-map)]
       (let [value (get my-map key)]
-	(.put result
-	      (as-str key)
-              (cond
-               (map? value)        (map->obj value)
-               (sequential? value) (if (not (map? (first value)))
-				     value
-				     (doall (map map->obj value)))
-               :else               value))))
+        (.put result
+          (name key)
+          (cond
+            (map? value)        (map->obj value)
+            (sequential? value) (if (not (map? (first value)))
+                                  value
+                                  (doall (map map->obj value)))
+            :else               value))))
     result))
 
 (defn obj->map
