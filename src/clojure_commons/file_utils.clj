@@ -71,3 +71,18 @@
   "Stolen from clojure.contrib since it's no longer available in 1.3"
   [re replacement ^String s] 
   (.replaceAll (re-matcher re s) replacement))
+
+(defn file?
+  "Tests whether the path is a file."
+  [file-path]
+  (. (File. file-path) isFile))
+
+(defn dir?
+  "Tests whether the path is a directory."
+  [file-path]
+  (. (File. file-path) isDirectory))
+
+(defn exists?
+  "Tests whether the given paths exist on the filesystem."
+  [& filepaths]
+  (every? #(. % exists) (map #(File. %) filepaths)))
