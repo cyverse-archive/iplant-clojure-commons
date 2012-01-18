@@ -67,11 +67,6 @@
   [file-path]
   (. (File. file-path) isAbsolute))
 
-(defn replace-re
-  "Stolen from clojure.contrib since it's no longer available in 1.3"
-  [re replacement ^String s] 
-  (.replaceAll (re-matcher re s) replacement))
-
 (defn file?
   "Tests whether the path is a file."
   [file-path]
