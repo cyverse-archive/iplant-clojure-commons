@@ -4,17 +4,33 @@
   (:import [org.jasig.cas.client.validation Cas20ProxyTicketValidator
             TicketValidationException]))
 
-(defn- valid-proxy-ticket?
-  "Determines whether or not the given proxy ticket is valid."
+(defn- get-assertion
+  "Gets a security assertion from the CAS server."
   [proxy-ticket cas-server server-name]
+  (log/warn proxy-ticket)
   (if (not (blank? proxy-ticket))
     (let [validator (Cas20ProxyTicketValidator. cas-server)]
       (.setAcceptAnyProxy validator true)
       (try
-        (do (.validate validator proxy-ticket server-name) true)
+        (.validate validator proxy-ticket server-name)
         (catch TicketValidationException e
-          (do (log/error e "proxy ticket validation failed") false))))
-    false))
+          (do (log/error e "proxy ticket validation failed") nil))))
+    nil))
+
+(defn- build-attr-map
+  "Builds a map containing the user's attributes"
+  [principal]
+  (assoc
+    (into {} (.getAttributes principal))
+    :uid (.getName principal)))
+
+(defn- assoc-attrs
+  "Associates user attributes from an assertion principal with a request."
+  [request principal]
+  (log/warn "associating user attributes with request")
+  (let [m (build-attr-map principal)]
+    (log/warn "User Attributes:" m)
+    (assoc request :user-attributes m)))
 
 (defn validate-cas-proxy-ticket
   "Authenticates a CAS proxy ticket that has been sent to the service in a
@@ -27,7 +43,8 @@
   [handler cas-server server-name]
   (fn [request]
     (let [proxy-ticket (get (:query-params request) "proxyToken")]
-      (log/warn (str "validating proxy ticket: " proxy-ticket))
-      (if (valid-proxy-ticket? proxy-ticket cas-server server-name)
-        (handler request)
-        {:status 401}))))
+      (log/debug (str "validating proxy ticket: " proxy-ticket))
+      (let [assertion (get-assertion proxy-ticket cas-server server-name)]
+        (if (nil? assertion)
+          {:status 401}
+          (handler (assoc-attrs request (.getPrincipal assertion))))))))
