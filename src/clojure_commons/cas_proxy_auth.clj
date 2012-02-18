@@ -7,7 +7,7 @@
 (defn- get-assertion
   "Gets a security assertion from the CAS server."
   [proxy-ticket cas-server server-name]
-  (log/warn proxy-ticket)
+  (log/debug proxy-ticket)
   (if (not (blank? proxy-ticket))
     (let [validator (Cas20ProxyTicketValidator. cas-server)]
       (.setAcceptAnyProxy validator true)
@@ -22,14 +22,13 @@
   [principal]
   (assoc
     (into {} (.getAttributes principal))
-    :uid (.getName principal)))
+    "uid" (.getName principal)))
 
 (defn- assoc-attrs
   "Associates user attributes from an assertion principal with a request."
   [request principal]
-  (log/warn "associating user attributes with request")
   (let [m (build-attr-map principal)]
-    (log/warn "User Attributes:" m)
+    (log/debug "User Attributes:" m)
     (assoc request :user-attributes m)))
 
 (defn validate-cas-proxy-ticket
