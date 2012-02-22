@@ -14,7 +14,8 @@
 (defn find-properties-file
   "Searches the classpath for the named properties file."
   [prop-name]
-  (. (. (. (. Thread currentThread) getContextClassLoader) getResource prop-name) getFile))
+  (let [resource (.getResource (.. Thread currentThread getContextClassLoader) prop-name)]
+    (if (nil? resource) nil (.getFile resource))))
 
 (defn find-resources-file
   [filename]
