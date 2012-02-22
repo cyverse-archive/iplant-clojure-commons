@@ -7,11 +7,9 @@
 (def ^:dynamic zkcl nil)
 
 (defmacro with-zk
-  [zurl & body]
-  `(let [zurl#  (java.net.URI. ~zurl)
-         zhost# (.getHost zurl#)
-         zport# (.getPort zurl#)
-         cl#    (zk/connect (str zhost# ":" zport#))]
+  [conn-str & body]
+  `(let [zconns# ~conn-str
+         cl#    (zk/connect zconns#)]
      (binding [zkcl cl#]
        (try (do ~@body)
          (finally (zk/close zkcl))))))
