@@ -39,11 +39,11 @@
 
    This handler currently relies upon two configuration parameters:
    conrad.cas.server and conrad.server-name."
-  [handler cas-server server-name]
+  [handler cas-server-fn server-name-fn]
   (fn [request]
-    (let [proxy-ticket (get (:query-params request) "proxyToken")]
-      (log/debug (str "validating proxy ticket: " proxy-ticket))
-      (let [assertion (get-assertion proxy-ticket cas-server server-name)]
+    (let [ticket (get (:query-params request) "proxyToken")]
+      (log/debug (str "validating proxy ticket: " ticket))
+      (let [assertion (get-assertion ticket (cas-server-fn) (server-name-fn))]
         (if (nil? assertion)
           {:status 401}
           (handler (assoc-attrs request (.getPrincipal assertion))))))))
