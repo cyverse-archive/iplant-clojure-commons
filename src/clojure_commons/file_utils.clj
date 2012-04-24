@@ -1,4 +1,5 @@
 (ns clojure-commons.file-utils
+  (:use [clojure.string :only [join split]])
   (:import [java.io File]))
 
 (defn path-join
@@ -57,10 +58,22 @@
     (str input-string "/")
     input-string))
 
+(defn normalize-path
+  "Normalizes a file path on Unix systems by eliminating '.' and '..' from it.
+   No attempts are made to resolve symbolic links."
+  [file-path]
+  (loop [dest [] src (split file-path #"/")]
+    (if (empty? src)
+      (join "/" dest)
+      (let [curr (first src)]
+        (cond (= curr ".") (recur dest (rest src))
+              (= curr "..") (recur (vec (butlast dest)) (rest src))
+              :else (recur (conj dest curr) (rest src)))))))
+
 (defn abs-path
   "Converts a path to an absolute path."
   [file-path]
-  (. (File. file-path) getAbsolutePath))
+  (normalize-path (. (File. file-path) getAbsolutePath)))
 
 (defn abs-path?
   "Returns true if the path passed in is an absolute path."
