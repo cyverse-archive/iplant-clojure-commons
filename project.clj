@@ -9,7 +9,5 @@
                  [slingshot "0.10.1"]
                  [org.mongodb/mongo-java-driver "2.6.3"]
                  [org.apache.httpcomponents/httpclient "4.1.2"]
-                 [commons-configuration/commons-configuration "1.7"]
-                 [org.jasig.cas.client/cas-client-core "3.2.0"
-                  :exclusions [javax.servlet/servlet-api]]]
+                 [commons-configuration/commons-configuration "1.7"]]
   :dev-dependencies [[swank-clojure "1.3.2"]])
