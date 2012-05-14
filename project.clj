@@ -1,4 +1,4 @@
-(defproject org.iplantc/clojure-commons "1.1.0-SNAPSHOT"
+(defproject org.iplantc/clojure-commons "1.1.1-SNAPSHOT"
   :description "Common Utilities for Clojure Projects"
   :dependencies [[org.clojure/clojure "1.3.0"]
                  [org.clojure/data.json "0.1.1"]
