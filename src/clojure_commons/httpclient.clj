@@ -6,8 +6,7 @@
 
 (defn- binary-content? [http-headers]
   (and (contains? http-headers :content-type)
-       (not (= (first (clj-str/split (http-headers :content-type) #"\/"))
-               "text"))))
+       (not= (first (clj-str/split (http-headers :content-type) #"\/")))))
 
 (defn- http-response->map [http-response]
   (let [headers (reduce #(assoc %1

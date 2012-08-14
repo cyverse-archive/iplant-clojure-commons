@@ -60,7 +60,7 @@
          json/json-str)
        
        (not (string? retval))
-     (.toString retval)
+     (str retval)
      
      :else retval)}))
 
@@ -69,9 +69,9 @@
   [exception]
   (let [string-writer (java.io.StringWriter.)
         print-writer  (java.io.PrintWriter. string-writer)]
-    (. exception printStackTrace print-writer)
-    (let [stack-trace       (. string-writer toString)]
-      (. string-writer toString))))
+    (.printStackTrace exception print-writer)
+    (let [stack-trace (str string-writer)]
+      (str string-writer))))
 
 (defn trap [action func & args]
   (try+

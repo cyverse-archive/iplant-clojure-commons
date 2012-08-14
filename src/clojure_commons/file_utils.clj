@@ -1,5 +1,6 @@
 (ns clojure-commons.file-utils
-  (:use [clojure.string :only [join split]])
+  (:use [clojure.java.io :only [file]]
+        [clojure.string :only [join split]])
   (:import [java.io File]))
 
 (defn path-join
@@ -8,7 +9,7 @@
   (if (seq paths)
     (let [path1    path
           path2    (first paths)
-          new-path (. (java.io.File. (java.io.File. path1) path2) toString)]
+          new-path (str (file (file path1) path2))]
       (if (seq (rest paths))
         (recur new-path (rest paths))
         new-path))
@@ -22,7 +23,7 @@
 
    Returns: New version of 'path' with the trailing slash removed."
   [path]
-  (. path replaceAll "/$" ""))
+  (.replaceAll path "/$" ""))
 
 (defn basename
   "Returns the basename of 'path'.
@@ -36,7 +37,7 @@
    Returns:
      String containing the basename of path."
   [path]
-  (. (File. path) getName))
+  (.getName (file path)))
 
 (defn dirname
   "Returns the dirname of 'path'.
@@ -49,12 +50,12 @@
    Returns:
      String containing the dirname of path."
   [path]
-  (. (File. path) getParent))
+  (.getParent (file path)))
 
 (defn add-trailing-slash
   "Adds a trailing slash to 'input-string' if it doesn't already have one."
   [input-string]
-  (if (not (. input-string endsWith "/"))
+  (if-not (.endsWith input-string "/")
     (str input-string "/")
     input-string))
 
@@ -73,24 +74,24 @@
 (defn abs-path
   "Converts a path to an absolute path."
   [file-path]
-  (normalize-path (. (File. file-path) getAbsolutePath)))
+  (normalize-path (.getAbsolutePath (file file-path))))
 
 (defn abs-path?
   "Returns true if the path passed in is an absolute path."
   [file-path]
-  (. (File. file-path) isAbsolute))
+  (.isAbsolute (file file-path)))
 
 (defn file?
   "Tests whether the path is a file."
   [file-path]
-  (. (File. file-path) isFile))
+  (.isFile (file file-path)))
 
 (defn dir?
   "Tests whether the path is a directory."
   [file-path]
-  (. (File. file-path) isDirectory))
+  (.isDirectory (file file-path)))
 
 (defn exists?
   "Tests whether the given paths exist on the filesystem."
   [& filepaths]
-  (every? #(. % exists) (map #(File. %) filepaths)))
+  (every? #(.exists %) (map file filepaths)))
