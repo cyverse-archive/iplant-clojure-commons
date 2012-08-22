@@ -1,6 +1,11 @@
 (ns clojure-commons.file-utils
-  (:use [clojure.string :only [join split]])
+  (:use [clojure.java.io :only [file]]
+        [clojure.string :only [join split]])
   (:import [java.io File]))
+
+(def ^:dynamic *max-temp-dir-attempts*
+  "The maximum number of times to attempt to create a temporary directory."
+  10)
 
 (defn path-join
   "Joins paths together and returns the resulting path as a string."
@@ -8,7 +13,7 @@
   (if (seq paths)
     (let [path1    path
           path2    (first paths)
-          new-path (. (java.io.File. (java.io.File. path1) path2) toString)]
+          new-path (str (file (file path1) path2))]
       (if (seq (rest paths))
         (recur new-path (rest paths))
         new-path))
@@ -22,7 +27,7 @@
 
    Returns: New version of 'path' with the trailing slash removed."
   [path]
-  (. path replaceAll "/$" ""))
+  (.replaceAll path "/$" ""))
 
 (defn basename
   "Returns the basename of 'path'.
@@ -36,7 +41,7 @@
    Returns:
      String containing the basename of path."
   [path]
-  (. (File. path) getName))
+  (.getName (file path)))
 
 (defn dirname
   "Returns the dirname of 'path'.
@@ -49,12 +54,12 @@
    Returns:
      String containing the dirname of path."
   [path]
-  (. (File. path) getParent))
+  (.getParent (file path)))
 
 (defn add-trailing-slash
   "Adds a trailing slash to 'input-string' if it doesn't already have one."
   [input-string]
-  (if (not (. input-string endsWith "/"))
+  (if-not (.endsWith input-string "/")
     (str input-string "/")
     input-string))
 
@@ -73,24 +78,75 @@
 (defn abs-path
   "Converts a path to an absolute path."
   [file-path]
-  (normalize-path (. (File. file-path) getAbsolutePath)))
+  (normalize-path (.getAbsolutePath (file file-path))))
 
 (defn abs-path?
   "Returns true if the path passed in is an absolute path."
   [file-path]
-  (. (File. file-path) isAbsolute))
+  (.isAbsolute (file file-path)))
 
 (defn file?
   "Tests whether the path is a file."
   [file-path]
-  (. (File. file-path) isFile))
+  (.isFile (file file-path)))
 
 (defn dir?
   "Tests whether the path is a directory."
   [file-path]
-  (. (File. file-path) isDirectory))
+  (.isDirectory (file file-path)))
 
 (defn exists?
   "Tests whether the given paths exist on the filesystem."
   [& filepaths]
-  (every? #(. % exists) (map #(File. %) filepaths)))
+  (every? #(.exists %) (map file filepaths)))
+
+(defn rec-delete
+  "Recursively deletes all files in a directory structure rooted at the given
+   directory.  Note that this recursion does consume stack space.  This
+   shouldn't be a problem, however, because a directory structure that is deep
+   enough to cause a stack overflow will probably create a path that is too
+   long for the OS to support."
+  [f]
+  (when (.isDirectory f)
+    (dorun (map rec-delete (.listFiles f))))
+  (.delete f))
+
+(defn- mk-temp-dir
+  "Attempts to create a temporary directory named by the provided function."
+  [name-fn]
+  (loop [idx 0]
+    (if-not (>= idx *max-temp-dir-attempts*)
+      (let [f (name-fn idx)]
+        (if (.mkdir f) f (recur (inc idx))))
+      nil)))
+
+(defn temp-dir
+  "Creates a temporary directory.  This function is used by the with-temp-dir
+   macro to create the temporary directory."
+  ([prefix err-fn]
+     (temp-dir prefix (file (System/getProperty "user.dir")) err-fn))
+  ([prefix parent err-fn]
+     (let [base          (str prefix (System/currentTimeMillis) "-")
+           temp-dir-file (fn [idx] (file parent (str base idx)))
+           temp-dir      (mk-temp-dir temp-dir-file)]
+       (when (nil? temp-dir)
+         (err-fn (.getPath parent) prefix base))
+       temp-dir)))
+
+(defmacro with-temp-dir
+  "Creates and switches the current working directory to a temporary directory
+   within the user's current working directory.  The body is executed in a try
+   expression with a finally clause that recursively deletes the directory.
+   If the directory can't be created then the provided error function will be
+   called with three arguments: the path to the parent directory, the
+   directory name prefix and the base name that was used.  The dynamic
+   variable, *max-temp-dir-attempts*, can be used to specify the maximum number
+   of times to try to create the temporary directory.  The default value of
+   this variable is 10."
+  [sym prefix err-fn & body]
+  `(let [~sym (temp-dir ~prefix ~err-fn)]
+     (try
+       (.delete ~sym)
+       (.mkdir ~sym)
+       ~@body
+       (finally (rec-delete ~sym)))))
