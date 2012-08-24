@@ -13,7 +13,7 @@
           (name key)
           (cond
             (map? value)        (map->obj value)
-            (sequential? value) (if (not (map? (first value)))
+            (sequential? value) (if-not (map? (first value))
                                   value
                                   (doall (map map->obj value)))
             :else               value))))
@@ -23,7 +23,7 @@
   "Translates a mongodb object to clojure json"
   [mongo-obj]
   (if-not (nil? mongo-obj)
-    (into {} (read-json (.toString mongo-obj)))
+    (into {} (read-json (str mongo-obj)))
     nil))
 
 ;;; More clojure-esque names

@@ -1,4 +1,4 @@
-(defproject org.iplantc/clojure-commons "1.2.0-SNAPSHOT"
+(defproject org.iplantc/clojure-commons "1.2.1-SNAPSHOT"
   :description "Common Utilities for Clojure Projects"
   :dependencies [[org.clojure/clojure "1.3.0"]
                  [org.clojure/data.json "0.1.1"]
@@ -9,5 +9,4 @@
                  [slingshot "0.10.1"]
                  [org.mongodb/mongo-java-driver "2.6.3"]
                  [org.apache.httpcomponents/httpclient "4.1.2"]
-                 [commons-configuration/commons-configuration "1.7"]]
-  :dev-dependencies [[swank-clojure "1.3.2"]])
+                 [commons-configuration/commons-configuration "1.7"]])
