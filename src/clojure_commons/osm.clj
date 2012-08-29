@@ -1,7 +1,7 @@
 (ns clojure-commons.osm
-  (:use [clojure.string :only (join)])
   (:require [clj-http.client :as client]
-            [clojure.data.json :as json]))
+            [clojure.data.json :as json]
+            [clojure-commons.client :as cc]))
 
 ;; Creates a new OSM client.
 (defn create [base bucket]
@@ -9,9 +9,8 @@
    :bucket bucket})
 
 ;; Builds an OSM URL from the base URL, the bucket and the list of components.
-(defn- build-url [osm & components]
-  (join "/" (map #(.replaceAll % "^/|/$" "")
-                 (concat [(:base osm) (:bucket osm)] components))))
+(defn- build-url [{:keys [base bucket]} & components]
+  (apply cc/build-url base bucket components))
 
 ;; Sends a query to the OSM.
 (defn query [osm query]
