@@ -1,17 +1,33 @@
 (ns clojure-commons.nibblonian
-  (:use [clojure.data.json :only [json-str]]
+  (:use [clojure.data.json :only [read-json json-str]]
         [clojure-commons.error-codes])
   (:require [clj-http.client :as client]
             [clojure-commons.client :as cc]))
 
+(defn get-avus
+  "Retrieves the AVUs associated with a file."
+  [base user path]
+  (let [url (cc/build-url base "file" "metadata")
+        res (cc/get url {:query-params {:path path
+                                        :user user}
+                         :as           :json})]
+    (get-in res [:body :metadata])))
+
+(defn avu-exists?
+  "Determines if an AVU is associated with a file."
+  [base user path attr]
+  (let [avus (get-avus base user path)]
+    (first (filter #(= (:attr %) attr) avus))))
+
 (defn delete-avu
   "Removes an AVU from a file."
   [base user path attr]
-  (let [url (cc/build-url base "file" "metadata")
-        res (cc/delete url {:query-params {:path path
-                                           :user user
-                                           :attr attr}})]
-    (:body res)))
+  (when (avu-exists? base user path attr)
+   (let [url (cc/build-url base "file" "metadata")
+         res (cc/delete url {:query-params {:path path
+                                            :user user
+                                            :attr attr}})]
+     (:body res))))
 
 (defn delete-tree-urls
   "Removes all of the tree URLs associated with a file."
