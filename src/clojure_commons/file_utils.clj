@@ -150,3 +150,21 @@
        (.mkdir ~sym)
        ~@body
        (finally (rec-delete ~sym)))))
+
+(defmacro with-temp-dir-in
+  "Creates a temporary directory inside a specified parent directory and binds a
+   file representing the path to the temporary directory to a provided symbol.
+   The body is executed in a try expression with a finally clause that
+   recursively deletes the directory.  If the directory can't be created then
+   the provided error function will be called with three arguments: the path to
+   the parent directory, the directory name prefix and the base name that was
+   used.  The dynamic variable, *max-temp-dir-attempts*, can be used to specify
+   the maximum number of times to try to create the temporary directory  The
+   default value of this variable is 10."
+  [sym parent prefix err-fn & body]
+  `(let [~sym (temp-dir ~prefix ~parent ~err-fn)]
+     (try
+       (.delete ~sym)
+       (.mkdir ~sym)
+       ~@body
+       (finally (rec-delete ~sym)))))
