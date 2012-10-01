@@ -5,6 +5,7 @@
                  [org.clojure/tools.logging "0.2.3"]
                  [zookeeper-clj "0.9.1"]
                  [clj-http "0.5.3"]
+                 [com.cemerick/url "0.0.6"]
                  [log4j/log4j "1.2.16"]
                  [slingshot "0.10.1"]
                  [org.mongodb/mongo-java-driver "2.6.3"]
