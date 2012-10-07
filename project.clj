@@ -1,10 +1,10 @@
-(defproject org.iplantc/clojure-commons "1.2.1-SNAPSHOT"
+(defproject org.iplantc/clojure-commons "1.2.2-SNAPSHOT"
   :description "Common Utilities for Clojure Projects"
-  :dependencies [[org.clojure/clojure "1.3.0"]
+  :dependencies [[org.clojure/clojure "1.4.0"]
                  [org.clojure/data.json "0.1.1"]
                  [org.clojure/tools.logging "0.2.3"]
                  [zookeeper-clj "0.9.1"]
-                 [clj-http "0.5.3"]
+                 [clj-http "0.5.5"]
                  [com.cemerick/url "0.0.6"]
                  [log4j/log4j "1.2.16"]
                  [slingshot "0.10.1"]
