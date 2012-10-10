@@ -62,7 +62,8 @@
   lmap)
 
 (defn log
-  "Takes in a map created by (prov-map) and logs it to the provenance service."
+  "Takes in a map created by (prov-map) and logs it to the provenance
+   service."
   [{:keys [prov-url object-id user service event category proxy-user data]
     :as log-map}]
   (let [lp-map (clean-prov-map log-map)]    
@@ -89,3 +90,12 @@
     (if (contains? resp :UUID)
       (:UUID resp)
       nil)))
+
+(defn exists?
+  "Checks to see if an object is already registered or not."
+  [prov-url obj-id]
+  (let [lookup-status (:status (call-lookup-object prov-url obj-id))]
+    (cond
+     (= lookup-status 404)      false
+     (<= 200 lookup-status 299) true
+     :else                      false)))
