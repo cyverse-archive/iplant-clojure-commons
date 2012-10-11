@@ -66,21 +66,23 @@
    service."
   [{:keys [prov-url object-id user service event category proxy-user data]
     :as log-map}]
+  (log/warn prov-url)
   (let [lp-map (clean-prov-map log-map)
-        log-url (str (url prov-url "0.1" "log"))]    
-    (log/info (str "Logging Provenance: " (json/json-str lp-map)))
-    (log/info (str "Logging Provenance Response: "
+        log-url (str (url prov-url "0.1" "log"))]
+    (log/warn (str "Provenance URL: " log-url))
+    (log/warn (str "Logging Provenance: " (json/json-str lp-map)))
+    (log/warn (str "Logging Provenance Response: "
                    (call-prov-log log-url lp-map)))))
 
 (defn register
   "Takes in an identifier string, an object name, and a optionally a string
    description. Returns a UUID."
-  [prov-url obj-id name desc & [parent-id]]
+  [prov-url obj-id name desc & [parent-uuid]]
   (let [robj    {:id obj-id :name name :desc desc}
         add-url (str (url prov-url "0.1" "object"))]
     (log/info (str "Register Provenance Object: " (json/json-str robj)))
     
-    (-> (call-add-object add-url robj parent-id)
+    (-> (call-add-object add-url robj parent-uuid)
         :body
         (log-map "Register Provenance Object Response: ")
         json/read-json)))
@@ -88,7 +90,7 @@
 (defn lookup
   "Takes in an identifier and looks up the UUID."
   [prov-url obj-id]
-  (let [lookup-url (str (url prov-url "0.1" "object" obj-id))
+  (let [lookup-url (str (url prov-url "0.1" "object"  (url-encode obj-id)))
         resp       (:body (call-lookup-object lookup-url))]
     (println resp)
     
@@ -99,7 +101,7 @@
 (defn exists?
   "Checks to see if an object is already registered or not."
   [prov-url obj-id]
-  (let [exists-url    (str (url prov-url "0.1" "object" obj-id))
+  (let [exists-url    (str (url prov-url "0.1" "object" (url-encode obj-id)))
         lookup-status (:status (call-lookup-object exists-url))]
     (cond
      (= lookup-status 404)      false
