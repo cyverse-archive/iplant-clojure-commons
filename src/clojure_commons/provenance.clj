@@ -41,19 +41,19 @@
     :body (json/json-str lp-map)}))
 
 (defn call-add-object
-  [prov-url ao-map]
+  [prov-url ao-map & [parent-id]]
   (client/put
-   prov-url
+   (if parent-id
+     (str (url prov-url :query {:parent parent-id}))
+     prov-url)
    {:throw-exceptions false
     :content-type :json
-    :body (json/json-str ao-map)}
-   {:content-type :json
     :body (json/json-str ao-map)}))
 
 (defn call-lookup-object
-  [prov-url object-id]
+  [prov-url]
   (client/get
-   (str (url prov-url object-id))
+   prov-url
    {:throw-exceptions false}))
 
 (defn log-map
@@ -66,18 +66,21 @@
    service."
   [{:keys [prov-url object-id user service event category proxy-user data]
     :as log-map}]
-  (let [lp-map (clean-prov-map log-map)]    
+  (let [lp-map (clean-prov-map log-map)
+        log-url (str (url prov-url "0.1" "log"))]    
     (log/info (str "Logging Provenance: " (json/json-str lp-map)))
     (log/info (str "Logging Provenance Response: "
-                   (call-prov-log prov-url lp-map)))))
+                   (call-prov-log log-url lp-map)))))
 
 (defn register
   "Takes in an identifier string, an object name, and a optionally a string
    description. Returns a UUID."
-  [prov-url obj-id name desc]
-  (let [robj {:id obj-id :name name :desc desc}]
+  [prov-url obj-id name desc & [parent-id]]
+  (let [robj    {:id obj-id :name name :desc desc}
+        add-url (str (url prov-url "0.1" "object"))]
     (log/info (str "Register Provenance Object: " (json/json-str robj)))
-    (-> (call-add-object prov-url robj)
+    
+    (-> (call-add-object add-url robj parent-id)
         :body
         (log-map "Register Provenance Object Response: ")
         json/read-json)))
@@ -85,8 +88,10 @@
 (defn lookup
   "Takes in an identifier and looks up the UUID."
   [prov-url obj-id]
-  (let [resp (:body (call-lookup-object prov-url obj-id))]
+  (let [lookup-url (str (url prov-url "0.1" "object" obj-id))
+        resp       (:body (call-lookup-object lookup-url))]
     (println resp)
+    
     (if (contains? resp :UUID)
       (:UUID resp)
       nil)))
@@ -94,7 +99,8 @@
 (defn exists?
   "Checks to see if an object is already registered or not."
   [prov-url obj-id]
-  (let [lookup-status (:status (call-lookup-object prov-url obj-id))]
+  (let [exists-url    (str (url prov-url "0.1" "object" obj-id))
+        lookup-status (:status (call-lookup-object exists-url))]
     (cond
      (= lookup-status 404)      false
      (<= 200 lookup-status 299) true
