@@ -37,30 +37,36 @@
 
 (defn err-resp
   ([err-obj]
-    {:status 500
+     {:status 500
      :body (-> err-obj
              (assoc :status "failure")
              json/json-str)})
   ([action err-obj]
-  {:status 500
-   :body (-> err-obj
-           (assoc :action action)
-           (assoc :status "failure")
-           json/json-str)}))
-
+     {:status 500
+      :body (-> err-obj
+                (assoc :action action)
+                (assoc :status "failure")
+                json/json-str)}))
+ 
 (defn success-resp [action retval]
-  (if (= (:status retval) 200)
-    retval
-    {:status 200
-     :body
-     (cond     
-       (map? retval)
-       (-> retval
+  (cond
+   (= (:status retval) 200)
+   retval
+
+   (= (:status retval) 404)
+   retval
+
+   :else
+   {:status 200
+    :body
+    (cond     
+     (map? retval)
+     (-> retval
          (assoc :status "success"
                 :action action)
          json/json-str)
-       
-       (not (string? retval))
+     
+     (not (string? retval))
      (str retval)
      
      :else retval)}))

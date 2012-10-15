@@ -17,6 +17,11 @@
   (:body (client/post (build-url osm "query")
                       {:body (json/json-str query)})))
 
+;; Counts documents matching a query in the OSM.
+(defn count-documents [osm query]
+  (:body (client/post (build-url osm "count")
+                      {:body (json/json-str query)})))
+
 ;; Saves an object in the OSM.
 (defn save-object [osm obj]
   (:body (client/post (build-url osm) {:body (json/json-str obj)})))
