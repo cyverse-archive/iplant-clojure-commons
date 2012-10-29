@@ -46,15 +46,26 @@
   [urls]
   {:tree-urls urls})
 
-(defn save-tree-urls
-  "Saves tree URLs in the file metadata.  The urls argument should contain a
-   sequence of elements as returned by format-tree-url."
-  [base user path urls]
-  (let [url  (cc/build-url base "file" "tree-urls")
-        body (json-str (format-tree-urls urls))
-        res  (cc/post url {:body         body
-                           :content-type :json
-                           :query-params {:path path
-                                          :user user}})]
+(defn- tree-metaurl-url
+  "Builds a URL that can be used to get or save a URL that can be used to
+   retrieve a list of tree URLs."
+  [base]
+  (cc/build-url base "file" "tree-urls"))
+
+(defn save-tree-metaurl
+  "Saves the URL used to get saved tree URLs.  The metaurl argument should
+   contain the URL used to obtain the tree URLs."
+  [base user path metaurl]
+  (cc/post (tree-metaurl-url base)
+           {:body             metaurl
+            :content-type     "text/plain"
+            :query-params     {:path path
+                               :user user}
+            :throw-exceptions false}))
+
+(defn get-tree-metaurl
+  "Gets the URL used to get saved tree URLs."
+  [base user path]
+  (let [res (client/get (tree-metaurl-url base) {:throw-exceptions false})]
     (when (<= 200 (:status res) 299)
       (:body res))))
