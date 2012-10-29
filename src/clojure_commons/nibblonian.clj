@@ -56,4 +56,5 @@
                            :content-type :json
                            :query-params {:path path
                                           :user user}})]
-    (:body res)))
+    (when (<= 200 (:status res) 299)
+      (:body res))))
