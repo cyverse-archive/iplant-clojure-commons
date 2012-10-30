@@ -50,7 +50,7 @@
   "Builds a URL that can be used to get or save a URL that can be used to
    retrieve a list of tree URLs."
   [base]
-  (cc/build-url base "file" "metadata"))
+  (cc/build-url base "metadata"))
 
 (defn save-tree-metaurl
   "Saves the URL used to get saved tree URLs.  The metaurl argument should
