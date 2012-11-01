@@ -24,7 +24,7 @@
       (log/warn e "unable to load Zookeeper properties")
       nil)))
 
-(defn load-configuration-from-file
+(defn load-config-from-file
   "Loads the configuration properties from a file.
 
    Parameters:
@@ -36,21 +36,21 @@
     (dosync (ref-set props (cp/read-properties (file filename))))
     (dosync (ref-set props (cp/read-properties (file conf-dir filename))))))
 
-(defn load-configuration-from-zookeeper
+(defn load-config-from-zookeeper
   "Loads the configuration properties from Zookeeper.  If the Zookeeper connection information
    is specified then that connection information will be used.  Otherwise, the connection
    information will be obtained from the zkhosts.properties file.
 
    Parameters:
        zk-url  - the URL used to connect to connect to Zookeeper (optional).
-       props   - 
-       service"
+       props   - the reference to the properties.
+       service - the name of the service."
   ([props service]
      (let [zk-url (get-zk-url)]
        (when (nil? zk-url)
          (throw+ {:error_code ce/ERR_MISSING_DEPENDENCY
                   :detail_msg "iplant-services is not installed"}))
-       (load-configuration-from-zookeeper zk-url props service)))
+       (load-config-from-zookeeper zk-url props service)))
   ([zk-url props service]
      (cl/with-zk
        zk-url
@@ -59,6 +59,14 @@
          (log/warn "THIS APPLICATION WILL NOT EXECUTE CORRECTLY.")
          (System/exit 1))
        (dosync (ref-set props (cl/properties service))))))
+
+(defn log-config
+  "Logs the configuration settings.
+
+   Parameters:
+       props - the reference to the properties."
+  [props]
+  (dorun (map #(log/warn (key %) "=" (val %)) (sort-by key @props))))
 
 (defn record-missing-prop
   "Records a property that is missing.  Instead of failing on the first missing parameter, we log
