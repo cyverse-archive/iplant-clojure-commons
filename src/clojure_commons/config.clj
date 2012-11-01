@@ -30,7 +30,7 @@
    Parameters:
        conf-dir - the path to the configuration directory.
        filename - the name of the configuration file.
-       props    - the reference to the properties."
+       props    - the ref or atom to store the properties in."
   [conf-dir filename props]
   (if (nil? conf-dir)
     (reset! props (cp/read-properties (file filename)))
@@ -43,8 +43,8 @@
 
    Parameters:
        zk-url  - the URL used to connect to connect to Zookeeper (optional).
-       props   - 
-       service"
+       props   - a ref or atom to store the properties in.
+       service - the name of the service."
   ([props service]
      (let [zk-url (get-zk-url)]
        (when (nil? zk-url)
