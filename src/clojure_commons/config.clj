@@ -10,6 +10,20 @@
 
 (def ^:private zkhosts-path "/etc/iplant-services/zkhosts.properties")
 
+(defn get-zk-url
+  "Gets the Zookeeper connection information from the standard location for iPlant services.  In
+   cases where the calling service wants to check for the presence of the configuration in order
+   to determine whether the properties should be loaded from Zookeeper or a local configuration
+   file, failure to load the Zookeeper connection information may not be an error.  Because of
+   this, if the connection information can't be loaded, this function logs a warning message and
+   returns nil."
+  []
+  (try
+    (get (cp/read-properties zkhosts-path) "zookeeper")
+    (catch IOException e
+      (log/warn e "unable to load Zookeeper properties")
+      nil)))
+
 (defn load-configuration-from-file
   "Loads the configuration properties from a file.
 
@@ -46,20 +60,6 @@
          (System/exit 1))
        (reset! props (cl/properties service)))))
 
-(defn get-zk-url
-  "Gets the Zookeeper connection information from the standard location for iPlant services.  In
-   cases where the calling service wants to check for the presence of the configuration in order
-   to determine whether the properties should be loaded from Zookeeper or a local configuration
-   file, failure to load the Zookeeper connection information may not be an error.  Because of
-   this, if the connection information can't be loaded, this function logs a warning message and
-   returns nil."
-  []
-  (try
-    (get (cp/read-properties zkhosts-path) "zookeeper")
-    (catch IOException e
-      (log/warn e "unable to load Zookeeper properties")
-      nil)))
-
 (defn record-missing-prop
   "Records a property that is missing.  Instead of failing on the first missing parameter, we log
    the missing parameter, mark the configuration as invalid and keep going so that we can log as
@@ -95,7 +95,7 @@
        config-valid - a ref or atom containing a validity flag."
   [props prop-name config-valid]
   (let [value (get @props prop-name "")]
-    (when (blank? value)
+    (when (string/blank? value)
       (record-missing-prop prop-name config-valid))
     value))
 
@@ -115,7 +115,7 @@
    Parameters:
        value - the value to convert to a vector."
   [value]
-  (split value #", *"))
+  (string/split value #", *"))
 
 (defn get-required-vector-prop
   "Gets a required vector property from a set of properties.
@@ -168,7 +168,7 @@
        config-valid - a ref or atom containing a validity flag."
   [props prop-name config-valid]
   (let [value (get-required-prop props prop-name config-valid)]
-    (if (blank? value)
+    (if (string/blank? value)
       0
       (string-to-int prop-name value config-valid))))
 
@@ -183,7 +183,7 @@
        config-valid - a ref or atom containing a validity flag."
   [props prop-name config-valid]
   (let [value (get-required-prop props prop-name config-valid)]
-    (if (blank? value)
+    (if (string/blank? value)
       0
       (string-to-long prop-name value config-valid))))
 
