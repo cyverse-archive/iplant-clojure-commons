@@ -29,6 +29,7 @@
 (def ERR_NOT_OWNER               "ERR_NOT_OWNER")
 (def ERR_INVALID_COPY            "ERR_INVALID_COPY")
 (def ERR_MISSING_DEPENDENCY      "ERR_MISSING_DEPENDENCY")
+(def ERR_CONFIG_INVALID          "ERR_CONFIG_INVALID")
 
 (defn error? [obj] (contains? obj :error_code))
 
