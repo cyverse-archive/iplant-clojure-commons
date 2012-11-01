@@ -28,6 +28,7 @@
 (def ERR_UNCHECKED_EXCEPTION     "ERR_UNCHECKED_EXCEPTION")
 (def ERR_NOT_OWNER               "ERR_NOT_OWNER")
 (def ERR_INVALID_COPY            "ERR_INVALID_COPY")
+(def ERR_MISSING_DEPENDENCY      "ERR_MISSING_DEPENDENCY")
 
 (defn error? [obj] (contains? obj :error_code))
 
