@@ -24,33 +24,33 @@
       (log/warn e "unable to load Zookeeper properties")
       nil)))
 
-(defn load-configuration-from-file
+(defn load-config-from-file
   "Loads the configuration properties from a file.
 
    Parameters:
        conf-dir - the path to the configuration directory.
        filename - the name of the configuration file.
-       props    - the ref or atom to store the properties in."
+       props    - the reference to the properties."
   [conf-dir filename props]
   (if (nil? conf-dir)
-    (reset! props (cp/read-properties (file filename)))
-    (reset! props (cp/read-properties (file conf-dir filename)))))
+    (dosync (ref-set props (cp/read-properties (file filename))))
+    (dosync (ref-set props (cp/read-properties (file conf-dir filename))))))
 
-(defn load-configuration-from-zookeeper
+(defn load-config-from-zookeeper
   "Loads the configuration properties from Zookeeper.  If the Zookeeper connection information
    is specified then that connection information will be used.  Otherwise, the connection
    information will be obtained from the zkhosts.properties file.
 
    Parameters:
        zk-url  - the URL used to connect to connect to Zookeeper (optional).
-       props   - a ref or atom to store the properties in.
+       props   - the reference to the properties.
        service - the name of the service."
   ([props service]
      (let [zk-url (get-zk-url)]
        (when (nil? zk-url)
          (throw+ {:error_code ce/ERR_MISSING_DEPENDENCY
                   :detail_msg "iplant-services is not installed"}))
-       (load-configuration-from-zookeeper zk-url props service)))
+       (load-config-from-zookeeper zk-url props service)))
   ([zk-url props service]
      (cl/with-zk
        zk-url
@@ -58,7 +58,15 @@
          (log/warn "THIS APPLICATION CANNOT RUN ON THIS MACHINE. SO SAYETH ZOOKEEPER.")
          (log/warn "THIS APPLICATION WILL NOT EXECUTE CORRECTLY.")
          (System/exit 1))
-       (reset! props (cl/properties service)))))
+       (dosync (ref-set props (cl/properties service))))))
+
+(defn log-config
+  "Logs the configuration settings.
+
+   Parameters:
+       props - the reference to the properties."
+  [props]
+  (dorun (map #(log/warn (key %) "=" (val %)) (sort-by key @props))))
 
 (defn record-missing-prop
   "Records a property that is missing.  Instead of failing on the first missing parameter, we log
@@ -67,11 +75,11 @@
 
    Parameters:
        prop-name    - the name of the property.
-       config-valid - a ref or atom containing a validity flag."
+       config-valid - a ref containing a validity flag."
   [prop-name config-valid]
   (log/error "required configuration setting" prop-name "is empty or"
              "undefined")
-  (reset! config-valid false))
+  (dosync (ref-set config-valid false)))
 
 (defn record-invalid-prop
   "Records a property that has an invalid value.  Instead of failing on the first missing
@@ -81,18 +89,18 @@
    Parameters:
        prop-name    - the name of the property.
        t            - the Throwable instance that caused the error.
-       confiv-valid - a ref or atom containing a validity flag."
+       confiv-valid - a ref containing a validity flag."
   [prop-name t config-valid]
   (log/error "invalid configuration setting for" prop-name ":" t)
-  (reset! config-valid false))
+  (dosync (ref-set config-valid false)))
 
 (defn get-required-prop
   "Gets a required property from a set of properties.
 
    Parameters:
-       props        - a ref or atom containing the properties.
+       props        - a ref containing the properties.
        prop-name    - the name of the property.
-       config-valid - a ref or atom containing a validity flag."
+       config-valid - a ref containing a validity flag."
   [props prop-name config-valid]
   (let [value (get @props prop-name "")]
     (when (string/blank? value)
@@ -103,9 +111,9 @@
   "Gets an optional property from a set of properties.
 
    Parameters:
-       props        - a ref or atom containing the properties.
+       props        - a ref containing the properties.
        prop-name    - the name of the property.
-       config-valid - a ref or atom containing a validity flag."
+       config-valid - a ref containing a validity flag."
   [props prop-name config-valid]
   (get @props prop-name ""))
 
@@ -121,9 +129,9 @@
   "Gets a required vector property from a set of properties.
 
    Parameters:
-       props        - a ref or atom containing the properties.
+       props        - a ref containing the properties.
        prop-name    - the name of the property.
-       config-valid - a ref or atom containing a validity flag."
+       config-valid - a ref containing a validity flag."
   [props prop-name config-valid]
   (vector-from-prop (get-required-prop props prop-name config-valid)))
 
@@ -134,7 +142,7 @@
    Parameters:
        prop-name    - the name of the property.
        value        - the value of the property as a string.
-       config-valid - a ref or atom containing a vailidity flag."
+       config-valid - a ref containing a vailidity flag."
   [prop-name value config-valid]
   (try
     (Integer/parseInt value)
@@ -149,7 +157,7 @@
    Parameters:
        prop-name    - the name of the property.
        value        - the value of the property as a string.
-       config-valid - a ref or atom containing a validity flag."
+       config-valid - a ref containing a validity flag."
   [prop-name value config-valid]
   (try
     (Long/parseLong value)
@@ -163,9 +171,9 @@
    will be returned.
 
    Parameters:
-       props        - a ref or atom containing the properties.
+       props        - a ref containing the properties.
        prop-name    - the name of the property.
-       config-valid - a ref or atom containing a validity flag."
+       config-valid - a ref containing a validity flag."
   [props prop-name config-valid]
   (let [value (get-required-prop props prop-name config-valid)]
     (if (string/blank? value)
@@ -178,9 +186,9 @@
    returned.
 
    Parameters:
-       props        - a ref or atom containing the properties.
+       props        - a ref containing the properties.
        prop-name    - the name of a property.
-       config-valid - a ref or atom containing a validity flag."
+       config-valid - a ref containing a validity flag."
   [props prop-name config-valid]
   (let [value (get-required-prop props prop-name config-valid)]
     (if (string/blank? value)
@@ -193,11 +201,18 @@
    Parameters:
        sym          - the symbol to define.
        desc         - a brief description of the property.
-       props        - a ref or atom containing the properties.
-       config-valid - a ref or atom containing a validity flag.
+       props        - a ref containing the properties.
+       config-valid - a ref containing a validity flag.
+       configs      - a ref containing the list of config settings.
        prop-name    - the name of the property."
-  [sym desc [props config-valid] prop-name]
-  `(defn ~sym ~desc [] (get-required-prop ~props ~prop-name ~config-valid)))
+  [sym desc [props config-valid configs] prop-name]
+  `(dosync
+    (alter
+     ~configs conj
+     (def ~sym ~desc
+       (memoize
+        (fn []
+          (get-required-prop ~props ~prop-name ~config-valid)))))))
 
 (defmacro defprop-optstr
   "Defines an optional string property.
@@ -205,11 +220,18 @@
    Parameters:
        sym          - the symbol to define.
        desc         - a brief description of the property.
-       props        - a ref or atom containing the properties.
-       config-valid - a ref or atom containing a validity flag.
+       props        - a ref containing the properties.
+       config-valid - a ref containing a validity flag.
+       configs      - a ref containing the list of config settings.
        prop-name    - the name of the property."
-  [sym desc [props config-valid] prop-name]
-  `(defn ~sym ~desc [] (get-optional-prop ~props ~prop-name ~config-valid)))
+  [sym desc [props config-valid configs] prop-name]
+  `(dosync
+    (alter
+     ~configs conj
+     (def ~sym ~desc
+       (memoize
+        (fn []
+          (get-optional-prop ~props ~prop-name ~config-valid)))))))
 
 (defmacro defprop-vec
   "Defines a required vector property.
@@ -217,11 +239,18 @@
    Parameters:
        sym          - the symbol to define.
        desc         - a brief description of the property.
-       props        - a ref or atom containing the properties.
-       config-valid - a ref or atom containing a validity flag.
+       props        - a ref containing the properties.
+       config-valid - a ref containing a validity flag.
+       configs      - a ref containing the list of config settings.
        prop-name    - the name of the property."
-  [sym desc [props config-valid] prop-name]
-  `(defn ~sym ~desc [] (get-required-vector-prop ~props ~prop-name ~config-valid)))
+  [sym desc [props config-valid configs] prop-name]
+  `(dosync
+    (alter
+     ~configs conj
+     (def ~sym ~desc
+       (memoize
+        (fn []
+          (get-required-vector-prop ~props ~prop-name ~config-valid)))))))
 
 (defmacro defprop-int
   "Defines a required integer property.
@@ -229,11 +258,18 @@
    Parameters:
        sym          - the symbol to define.
        desc         - a brief description of the property.
-       props        - a ref or atom containing the properties.
-       config-valid - a ref or atom containing a validity flag.
+       props        - a ref containing the properties.
+       config-valid - a ref containing a validity flag.
+       configs      - a ref containing the list of config settings.
        prop-name    - the name of the property."
-  [sym desc [props config-valid] prop-name]
-  `(defn ~sym ~desc [] (get-required-integer-prop ~props ~prop-name ~config-valid)))
+  [sym desc [props config-valid configs] prop-name]
+  `(dosync
+    (alter
+     ~configs conj
+     (def ~sym ~desc
+       (memoize
+        (fn []
+          (get-required-integer-prop ~props ~prop-name ~config-valid)))))))
 
 (defmacro defprop-long
   "Defines a required long property.
@@ -241,8 +277,25 @@
    Parameters:
        sym          - the symbol to define.
        desc         - a brief description of the property.
-       props        - a ref or atom containing the properties.
-       config-valid - a ref or atom containing a validity flag.
+       props        - a ref containing the properties.
+       config-valid - a ref containing a validity flag.
+       configs      - a ref containing the list of config settings.
        prop-name    - the name of the property."
-  [sym desc [props config-valid] prop-name]
-  `(defn ~sym ~desc [] (get-required-long-prop ~props ~prop-name ~config-valid)))
+  [sym desc [props config-valid configs] prop-name]
+  `(dosync
+    (alter
+     ~configs conj
+     (def ~sym ~desc
+       (memoize
+        (fn []
+          (get-required-long-prop ~props ~prop-name ~config-valid)))))))
+
+(defn validate-config
+  "Validates a configuration that has been defined and loaded using this library.
+
+   Parameters:
+       configs      - a ref containing an array of symbols that were defined.
+       config-valid - a ref to the configuration validity flag."
+  [configs config-valid]
+  (dorun (map #(%) @configs))
+  @config-valid)
