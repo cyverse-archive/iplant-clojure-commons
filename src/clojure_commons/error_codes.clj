@@ -30,6 +30,8 @@
 (def ERR_INVALID_COPY            "ERR_INVALID_COPY")
 (def ERR_TICKET_EXISTS           "ERR_TICKET_EXISTS")
 (def ERR_TICKET_DOES_NOT_EXIST   "ERR_TICKET_DOES_NOT_EXIST")
+(def ERR_MISSING_DEPENDENCY      "ERR_MISSING_DEPENDENCY")
+(def ERR_CONFIG_INVALID          "ERR_CONFIG_INVALID")
 
 (defn error? [obj] (contains? obj :error_code))
 
