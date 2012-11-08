@@ -8,7 +8,7 @@
    new task.  To remove a task, first reserve it.  When the task is completed,
    delete it.
 
-   All public functions that talk with the assigned beanstalkd, required a 
+   All public functions that talk with the assigned beanstalkd, required a
    client constructed by the mk-client function, and should be called inside of
    the with-server function.
 
@@ -22,10 +22,10 @@
   [& args])
 
 
-(defn- perform-op-once 
-  [client beanstalk-op & {:keys [oom-handler 
-                                 drain-handler 
-                                 bury-handler 
+(defn- perform-op-once
+  [client beanstalk-op & {:keys [oom-handler
+                                 drain-handler
+                                 bury-handler
                                  deadline-handler]
                           :or   {oom-handler      nop
                                  drain-handler    nop
@@ -38,7 +38,7 @@
         (ss/throw+ {:type :internal-error}))
       (catch [:type :not_found] {keys []})
       (catch [:type :protocol] {:keys [message]}
-        (condp #(re-find (re-pattern %1) %2) message 
+        (condp #(re-find (re-pattern %1) %2) message
           "OUT_OF_MEMORY"   (oom-handler)
           "INTERNAL_ERROR"  (ss/throw+ {:type :internal-error})
           "DRAINING"        (drain-handler)
@@ -55,7 +55,7 @@
   [client]
   (let [queue-ref (:beanstalk client)]
     (ss/try+
-      (when @queue-ref 
+      (when @queue-ref
         (swap! queue-ref beanstalk/close))
       (catch Exception e
         (reset! queue-ref nil)
@@ -97,7 +97,7 @@
 
    Parameters:
      beanstalk-ctor - This is the constructor for the underlying BeanstalkObject.
-     connect-tries - This is the number of times the client will attempt to 
+     connect-tries - This is the number of times the client will attempt to
        connect to beanstalkd before giving up.
      tast-ttr - This is the number of seconds the client will have to perform a
        task while reserved.
@@ -111,10 +111,10 @@
    :task-ttr   task-ttr
    :tube       tube
    :beanstalk  (atom nil)})
-  
+
 
 (defmacro with-server
-  "This macro connects to a server and executes a sequence of functions.  
+  "This macro connects to a server and executes a sequence of functions.
    Finally, it closes the connection.
 
    Parameters:
@@ -144,18 +144,18 @@
 
    Throws:
      :connection - This is thrown if it loses its connection to beanstalkd.
-     :internal-error - This is thrown if there is an error in the logic internal 
+     :internal-error - This is thrown if there is an error in the logic internal
        to the work queue.
      :unknown-error - This is thrown if an unidentifiable error occurs."
   [client task-id]
   (assert (not= nil @(:beanstalk client)))
   (perform-op client #(beanstalk/delete % task-id))
   nil)
-            
+
 
 (defn put
   "Posts a task to beanstalkd.
-  
+
    Parameters:
      client - the beanstalkd client
      task-str - The serialized task to post
@@ -165,24 +165,24 @@
 
    Throws:
      :connection - This is thrown if it loses its connection to beanstalkd.
-     :internal-error - This is thrown if there is an error in the logic error 
+     :internal-error - This is thrown if there is an error in the logic error
        internal to the work queue.
      :unknown-error - This is thrown if an unidentifiable error occurs.
      :beanstalkd-oom - This is thrown if beanstalkd is out of memory.
-     :beanstalkd-draining - This is thrown if beanstalkd is draining and not 
+     :beanstalkd-draining - This is thrown if beanstalkd is draining and not
        accepting new tasks."
   [client task-str]
   (assert (not= nil @(:beanstalk client)))
-  (letfn [(put' [beanstalk] (beanstalk/put beanstalk 
-                                           0 
-                                           0 
-                                           (:task-ttr client) 
-                                           (count task-str) 
+  (letfn [(put' [beanstalk] (beanstalk/put beanstalk
+                                           0
+                                           0
+                                           (:task-ttr client)
+                                           (count task-str)
                                            task-str))]
     (perform-op client put'
       :oom-handler   #(ss/throw+ {:type :beanstalkd-oom})
       :drain-handler #(ss/throw+ {:type :beanstalkd-draining})
-      :bury-handler  (fn [id] 
+      :bury-handler  (fn [id]
                        (delete client id)
                        (ss/throw+ {:type :beanstalkd-oom})))
     nil))
@@ -203,11 +203,11 @@
 
    Throws:
      :connection - This is thrown if it loses its connection to beanstalkd.
-     :internal-error - This is thrown if there is an error in the logic error 
+     :internal-error - This is thrown if there is an error in the logic error
        internal to the work queue.
      :unknown-error - This is thrown if an unidentifiable error occurs.
      :beanstalkd-oom - This is thrown if beanstalkd is out of memory."
   [client]
   (assert (not= nil @(:beanstalk client)))
-  (perform-op client beanstalk/reserve 
+  (perform-op client beanstalk/reserve
     :oom-handler #(ss/throw+ {:type :beanstalkd-oom})))
