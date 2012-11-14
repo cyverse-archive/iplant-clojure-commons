@@ -76,3 +76,10 @@
            (:filter #(= (:attr %) "tree-urls"))
            (first)
            (:value)))))
+
+(defn get-user-groups
+  "Retrieves the set of groups a user belongs to."
+  [base user]
+  (let [resp (cc/get (cc/build-url base "groups") 
+                     {:query-params {:user user} :as :json})]
+    (set (get-in resp [:body :groups]))))
