@@ -72,7 +72,7 @@
    Parameters:
        props - the reference to the properties."
   [props]
-  (letfn [] (dorun (map log-prop (sort-by key @props)))))
+  (dorun (map log-prop (sort-by key @props))))
 
 (defn record-missing-prop
   "Records a property that is missing.  Instead of failing on the first missing parameter, we log
