@@ -60,13 +60,19 @@
          (System/exit 1))
        (dosync (ref-set props (cl/properties service))))))
 
+(defn- log-prop
+  "Logs a single configuration setting."
+  [[k v]]
+  (let [v (if (re-find #"password" k) (string/replace v #"." \*) v)]
+    (log/warn "CONFIG:" k "=" v)))
+
 (defn log-config
   "Logs the configuration settings.
 
    Parameters:
        props - the reference to the properties."
   [props]
-  (dorun (map #(log/warn (key %) "=" (val %)) (sort-by key @props))))
+  (letfn [] (dorun (map log-prop (sort-by key @props)))))
 
 (defn record-missing-prop
   "Records a property that is missing.  Instead of failing on the first missing parameter, we log
