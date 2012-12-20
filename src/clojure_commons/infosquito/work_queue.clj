@@ -91,6 +91,11 @@
         (perform-once)))))
 
 
+(defn- has-server?
+  [client]
+  (not= nil @(:beanstalk client)))
+  
+
 (defn mk-client
   "Constructs the client that manages communications the the assigned beanstalkd
    server.
@@ -148,7 +153,7 @@
        to the work queue.
      :unknown-error - This is thrown if an unidentifiable error occurs."
   [client task-id]
-  (assert (not= nil @(:beanstalk client)))
+  (assert (has-server? client))
   (perform-op client #(beanstalk/delete % task-id))
   nil)
 
@@ -172,7 +177,7 @@
      :beanstalkd-draining - This is thrown if beanstalkd is draining and not
        accepting new tasks."
   [client task-str]
-  (assert (not= nil @(:beanstalk client)))
+  (assert (has-server? client))
   (letfn [(put' [beanstalk] (beanstalk/put beanstalk
                                            0
                                            0
@@ -186,8 +191,8 @@
                        (delete client id)
                        (ss/throw+ {:type :beanstalkd-oom})))
     nil))
-
-
+  
+  
 (defn reserve
   "Reserves a task in beanstalkd
 
@@ -208,6 +213,6 @@
      :unknown-error - This is thrown if an unidentifiable error occurs.
      :beanstalkd-oom - This is thrown if beanstalkd is out of memory."
   [client]
-  (assert (not= nil @(:beanstalk client)))
+  (assert (has-server? client))
   (perform-op client beanstalk/reserve
     :oom-handler #(ss/throw+ {:type :beanstalkd-oom})))
