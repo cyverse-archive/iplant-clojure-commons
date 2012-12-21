@@ -142,7 +142,7 @@
 
    Parameters:
      client - the beanstalkd client
-     task-id - the identifier for the task being removed
+     job-id - the identifier for the task being removed
 
    Preconditions:
      The client is connected to a beanstalkd server.
@@ -152,9 +152,9 @@
      :internal-error - This is thrown if there is an error in the logic internal
        to the work queue.
      :unknown-error - This is thrown if an unidentifiable error occurs."
-  [client task-id]
+  [client job-id]
   (assert (has-server? client))
-  (perform-op client #(beanstalk/delete % task-id))
+  (perform-op client #(beanstalk/delete % job-id))
   nil)
 
 
