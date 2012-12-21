@@ -21,7 +21,7 @@
         client (mk-client ctor 1 2 "infosquito")]
     (is (= ctor (:ctor client)))
     (is (= 1 (:conn-tries client)))
-    (is (= 2 (:task-ttr client)))
+    (is (= 2 (:job-ttr client)))
     (is (= "infosquito" (:tube client)))
     (is (nil? @(:beanstalk client)))))
 

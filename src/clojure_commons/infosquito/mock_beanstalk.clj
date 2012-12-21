@@ -145,7 +145,7 @@
 
   (reserve-with-timeout [_ timeout]
     (.reserve _))
-
+      
   (delete [_ id]
     (locking _
       (ss/try+
