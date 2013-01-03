@@ -75,7 +75,7 @@
          [tube' job]))))
   
 
-(defn- touch-job
+(defn- touch-in-tube
   [tube job-id touch-time]
   (if (reserved-in-tube? tube job-id)
     (let [reserved' (conj (:reserved tube) (renew (find-reservation tube job-id) touch-time))]
@@ -201,6 +201,15 @@
                                   tube))))
 
 
+(defn- touch-job
+  [state job-id]
+  (when-not (reserved? state job-id) (ss/throw+ {:type :not-found}))
+  (update-tubes state
+                (fn [name tube] (if (contains? (:watching state) name)
+                                  (touch-in-tube tube job-id (:now state))
+                                  tube))))
+  
+  
 (defn- use-tube
   [state tube]
   (assoc (ensure-tube state tube) :using tube))
@@ -283,6 +292,15 @@
         (swap! state-ref #(delete-job % id))
         (str "DELETED" beanstalk/crlf)
         (catch [:type :not-found] {:keys []}
+          (str "NOT_FOUND" beanstalk/crlf)))))
+  
+  (touch [_ id]
+    (locking _
+      (ss/try+
+        (validate-open @state-ref)
+        (swap! state-ref #(touch-job % id))
+        (str "TOUCHED" beanstalk/crlf)
+        (catch [:type :not-found] {}
           (str "NOT_FOUND" beanstalk/crlf))))))
 
 
