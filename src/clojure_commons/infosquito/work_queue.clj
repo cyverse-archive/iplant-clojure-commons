@@ -179,7 +179,24 @@
                        (ss/throw+ {:type :beanstalkd-oom})))
     nil))
   
-  
+
+(defn release
+  "Releases an unfinished job back to beanstalkd.
+
+   Parameters:
+     client - the beanstalk client
+     job-id - the identifier for the job being released
+
+   Throws:
+     :connection - This is thrown if it loses its connection to beanstalkd.
+     :internal-error - This is thrown if there is an error in the logic internal to the work queue.
+     :unknown-error - This is thrown if an unidentifiable error occurs."
+  [client job-id]
+  (assert (has-server? client))
+  (perform-op client beanstalk/release job-id 0 0)
+  nil)
+
+
 (defn reserve
   "Reserves a job in beanstalkd
 
@@ -202,3 +219,20 @@
   [client]
   (assert (has-server? client))
   (perform-op client beanstalk/reserve :oom-handler #(ss/throw+ {:type :beanstalkd-oom})))
+
+
+(defn touch
+  "Tells beanstalkd that a job has not been finished.  This renews the reservation.
+
+   Parameters:
+     client - the beanstalk client
+     job-id - the identifier for the job whose reservation is to be renewed
+
+   Throws:
+     :connection - This is thrown if it loses its connection to beanstalkd.
+     :internal-error - This is thrown if there is an error in the logic internal to the work queue.
+     :unknown-error - This is thrown if an unidentifiable error occurs."
+  [client job-id]
+  (assert (has-server? client))
+  (perform-op client beanstalk/touch job-id)
+  nil)
