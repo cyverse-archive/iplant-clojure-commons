@@ -147,6 +147,12 @@
     (update-tube state tube-name (mk-tube))))
 
 
+(defn- update-tubes
+  "update is a function that accepts a key-value pair"
+  [state update]
+  (assoc state :tubes (map update (:tubes state))))
+
+
 (defn- ready?
   [state]
   (some #(tube-ready? (get-tube state %)) (:watching state)))
@@ -160,6 +166,12 @@
 (defn- inc-id
   [state]
   (assoc state :next-id (inc (:next-id state))))
+
+
+(defn- advance-time
+  [state delta-time]
+  (let [now (+ (:now state) delta-time)]
+    (update-tubes (assoc state :now now) #(release-expired-jobs %2 now))))
 
 
 (defn- put-job
@@ -182,10 +194,11 @@
 
 (defn- delete-job
   [state job-id]
-  (when-not (reserved? state job-id) (ss/throw+ {:type :not-found}))  
-  (reduce (fn [s t] (update-tube s t (delete-from-tube (get-tube s t) job-id)))
-          state 
-          (:watching state)))
+  (when-not (reserved? state job-id) (ss/throw+ {:type :not-found}))
+  (update-tubes state 
+                (fn [name tube] (if (contains? (:watching state) name) 
+                                  (delete-from-tube tube job-id)
+                                  tube))))
 
 
 (defn- use-tube
@@ -210,14 +223,10 @@
     (reset! state-ref state')
     job))
 
-  
+
 (defn advance-time!
   [state-ref delta-time] 
-  (let [state'  (assoc @state-ref :now (+ (:now @state-ref) delta-time))
-        state'' (reduce (fn [s t] (update-tube s t (release-expired-jobs (get-tube s t) delta-time)))
-                        state'
-                        (keys (:tubes state')))]
-    (reset! @state-ref state'')))
+  (swap! @state-ref #(advance-time % delta-time)))
   
   
 (defrecord ^{:private true} MockBeanstalk [state-ref]
@@ -233,7 +242,7 @@
       (validate-open @state-ref)
       (swap! state-ref #(use-tube % tube))))
 
-  (put [_ pri delay ttr bytes data]
+  (put [_ pri delay-time ttr bytes data]
     (locking _
       (validate-state @state-ref)
       (let [id  (:next-id @state-ref)]
