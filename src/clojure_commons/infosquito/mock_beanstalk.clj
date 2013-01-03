@@ -135,7 +135,7 @@
   (get (:tubes state) tube-name))
 
 
-(defn- update-tubes
+(defn- update-tube
   [state tube-name tube]
   (assoc state :tubes (assoc (:tubes state) tube-name tube)))
 
@@ -144,7 +144,7 @@
   [state tube-name]
   (if (contains? (:tubes state) tube-name)
     state
-    (update-tubes state tube-name (mk-tube))))
+    (update-tube state tube-name (mk-tube))))
 
 
 (defn- ready?
@@ -165,7 +165,7 @@
 (defn- put-job
   [state job-id payload]
   (let [tube (:using state)]
-    (update-tubes state tube (put-in-tube (get-tube state tube) (mk-job job-id payload)))))
+    (update-tube state tube (put-in-tube (get-tube state tube) (mk-job job-id payload)))))
 
 
 (defn- reserve-job
@@ -176,21 +176,14 @@
       (let [tube (get-tube state tube-name)]
         (if (tube-ready? tube)
           (let [[tube' job] (reserve-in-tube tube (:now state))]
-            [(update-tubes state name tube') job])
+            [(update-tube state name tube') job])
           (recur rem-tubes))))))
 
 
-(defn- reserve!
-  [state-ref]
-  (let [[state' job] (reserve-job @state-ref)]
-    (reset! state-ref state')
-    job))
-
-  
 (defn- delete-job
   [state job-id]
   (when-not (reserved? state job-id) (ss/throw+ {:type :not-found}))  
-  (reduce (fn [s t] (update-tubes s t (delete-from-tube (get-tube s t) job-id)))
+  (reduce (fn [s t] (update-tube s t (delete-from-tube (get-tube s t) job-id)))
           state 
           (:watching state)))
 
@@ -211,6 +204,22 @@
   (assoc state :watching (disj (:watching state) tube)))
 
 
+(defn- reserve!
+  [state-ref]
+  (let [[state' job] (reserve-job @state-ref)]
+    (reset! state-ref state')
+    job))
+
+  
+(defn advance-time!
+  [state-ref delta-time] 
+  (let [state'  (assoc @state-ref :now (+ (:now @state-ref) delta-time))
+        state'' (reduce (fn [s t] (update-tube s t (release-expired-jobs (get-tube s t) delta-time)))
+                        state'
+                        (keys (:tubes state')))]
+    (reset! @state-ref state'')))
+  
+  
 (defrecord ^{:private true} MockBeanstalk [state-ref]
   beanstalk/BeanstalkObject
 
