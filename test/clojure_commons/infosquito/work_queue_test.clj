@@ -8,7 +8,7 @@
 
 (defn- init-tubes
   [queue-state id payload]
-  (assoc queue-state :tubes {"infosquito" {:ready    (list (mk-job id payload))
+  (assoc queue-state :tubes {"infosquito" {:ready    (list (mk-job id 10 payload))
                                            :reserved #{}}}))
 
 
@@ -71,7 +71,7 @@
         payload (json/json-str {})]
     (with-server client (put client payload))
     (is (= (-> @state :tubes (get "infosquito") :ready)
-           [{:id 0 :payload payload}]))))
+           [{:id 0 :ttr 2 :payload payload}]))))
 
 
 (deftest test-put-oom

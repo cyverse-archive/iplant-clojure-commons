@@ -1,14 +1,15 @@
 (ns clojure-commons.infosquito.mock-beanstalk
-  "This is a mock implementation of a Beanstalk Queue.  It does not support
-   priority, delay, time to run (TTR), burying, max-job-size, timeouts for
-   reservations, or multiple workers."
+  "This is a mock implementation of a Beanstalk Queue.  It does not support priority, delay, burying, 
+   max-job-size, timeouts for reservations, or multiple workers."
   (:require [com.github.drsnyder.beanstalk :as beanstalk]
             [slingshot.slingshot :as ss]))
 
 
 (defn mk-job
-  [id payload]
-  {:id id :payload payload})
+  [id ttr payload]
+  {:id      id
+   :ttr     ttr
+   :payload payload})
 
 
 (defn- identifies?
@@ -22,8 +23,9 @@
 
 
 (defn- expired?
-  [reservation cutoff-time]
-  (< cutoff-time (:reserve-time reservation)))
+  [reservation epoch]
+  (> epoch 
+     (+ (:reserve-time reservation) (:ttr (:job reservation)))))
 
 
 (defn- for-job?
@@ -94,9 +96,9 @@
   
 
 (defn- release-expired-jobs
-  [tube cutoff-time]
+  [tube epoch]
   (let [reserved             (:reserved tube)
-        expired-reservations (filter #(expired? % cutoff-time) reserved)]
+        expired-reservations (filter #(expired? % epoch) reserved)]
     (assoc tube 
            :ready    (concat (map :job expired-reservations) (:ready tube))
            :reserved (apply disj reserved expired-reservations))))
@@ -175,9 +177,9 @@
 
 
 (defn- put-job
-  [state job-id payload]
+  [state job-id ttr payload]
   (let [tube (:using state)]
-    (update-tube state tube (put-in-tube (get-tube state tube) (mk-job job-id payload)))))
+    (update-tube state tube (put-in-tube (get-tube state tube) (mk-job job-id ttr payload)))))
 
 
 (defn- reserve-job
@@ -257,7 +259,7 @@
       (let [id  (:next-id @state-ref)]
         (swap! state-ref inc-id)
         (when (:bury? @state-ref) (ss/throw+ {:type :protocol :message (str "BURIED " id)}))
-        (swap! state-ref #(put-job % id data))
+        (swap! state-ref #(put-job % id ttr data))
         (.notify _)
         (str "INSERTED " id beanstalk/crlf))))
 
