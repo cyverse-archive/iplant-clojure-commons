@@ -71,7 +71,7 @@
         payload (json/json-str {})]
     (with-server client (put client payload))
     (is (= (-> @state :tubes (get "infosquito") :ready)
-           [{:id 0 :ttr 2 :payload payload}]))))
+           [(mk-job 0 2 payload)]))))
 
 
 (deftest test-put-oom

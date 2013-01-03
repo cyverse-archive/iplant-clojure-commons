@@ -5,6 +5,8 @@
             [slingshot.slingshot :as ss]))
 
 
+; JOB
+
 (defn mk-job
   [id ttr payload]
   {:id      id
@@ -12,32 +14,36 @@
    :payload payload})
 
 
-(defn- identifies?
+(defn identifies?
   [job id]
   (= id (:id job)))
 
 
-(defn- mk-reservation
+; RESERVATION
+
+(defn mk-reservation
   [job reserve-time]
   {:job job :reserve-time reserve-time})
 
 
-(defn- expired?
+(defn expired?
   [reservation epoch]
   (> epoch 
      (+ (:reserve-time reservation) (:ttr (:job reservation)))))
 
 
-(defn- for-job?
+(defn for-job?
   [reservation job-id]
   (identifies? (:job reservation) job-id))
 
 
-(defn- renew
+(defn renew
   [reservation renewal-time]
   (assoc reservation :reserve-time renewal-time))
 
   
+; TUBE
+
 (defn- mk-tube 
   []
   {:ready    '()
@@ -108,7 +114,9 @@
   [tube job-id]
   (assoc tube :reserved (disj (:reserved tube) (find-reservation tube job-id))))
   
-  
+
+; BEANSTALK STATE
+
 (def ^{:private false} default-state {:tubes     {"default" (mk-tube)}
                                       :using     "default"
                                       :watching  #{"default"}
