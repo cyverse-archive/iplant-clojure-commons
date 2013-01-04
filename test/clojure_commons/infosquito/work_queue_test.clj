@@ -45,12 +45,16 @@
 
 
 (deftest test-delete
-  (let [state  (atom (init-tubes default-state 0 (json/json-str {})))
+  (let [job-id 0
+        job    (mk-job job-id 10 (json/json-str {}))
+        tubes  {"infosquito" {:ready '() :reserved #{(mk-reservation job 0)}}}
+        state  (atom (assoc default-state :tubes tubes))
         client (init-client state)]
-    (with-server client (delete client 0))
-    (is (empty? (get "default" (:queue @state))))))
+    (with-server client (delete client job-id))
+    (is (empty? (:reserved (get (:tubes @state) "infosquito"))))
+    (is (empty? (:ready (get (:tubes @state) "infosquito"))))))
 
-
+  
 (deftest test-delete-bad-connection
   (let [state  (atom (assoc (init-tubes default-state 0 (json/json-str {}))
                             :closed? true))

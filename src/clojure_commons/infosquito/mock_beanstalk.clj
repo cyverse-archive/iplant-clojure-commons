@@ -201,7 +201,7 @@
       (let [tube (get-tube state tube-name)]
         (if (tube-ready? tube)
           (let [[tube' job] (reserve-in-tube tube (:now state))]
-            [(update-tube state name tube') job])
+            [(update-tube state tube-name tube') job])
           (recur rem-tubes))))))
 
 
