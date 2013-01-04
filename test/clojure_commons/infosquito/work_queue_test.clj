@@ -114,3 +114,16 @@
     (with-server client
       (is (= payload
              (:payload (reserve client)))))))
+
+
+(deftest test-touch
+  (let [job-id 0
+        job    (mk-job job-id 10 (json/json-str {}))
+        tubes  {"infosquito" {:ready '() :reserved #{(mk-reservation job 0)}}}
+        now    1
+        state  (atom (assoc default-state :tubes tubes :now now))
+        client (init-client state)]
+    (with-server client
+      (touch client job-id))
+    (is (= (-> @state :tubes (get "infosquito") :reserved)
+           #{(mk-reservation job now)}))))

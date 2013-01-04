@@ -234,5 +234,5 @@
      :unknown-error - This is thrown if an unidentifiable error occurs."
   [client job-id]
   (assert (has-server? client))
-  (perform-op client beanstalk/touch job-id)
+  (perform-op client #(beanstalk/touch % job-id))
   nil)

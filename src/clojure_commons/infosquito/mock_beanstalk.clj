@@ -46,8 +46,7 @@
 
 (defn- mk-tube 
   []
-  {:ready    '()
-   :reserved #{}})
+  {:ready '() :reserved #{}})
 
 
 (defn- tube-ready?
@@ -62,10 +61,10 @@
 
 (defn- find-reservation
   [tube job-id]
-  (let [set-find (comp first keep)]
-    (set-find #(for-job? % job-id) (:reserved tube))))
+  (first (drop-while #(not (for-job? % job-id)) 
+                     (:reserved tube))))
 
-  
+
 (defn- put-in-tube
   [tube job]
   (assoc tube :ready (concat (:ready tube) [job])))
@@ -86,8 +85,9 @@
 (defn- touch-in-tube
   [tube job-id touch-time]
   (if (reserved-in-tube? tube job-id)
-    (let [reserved' (conj (:reserved tube) (renew (find-reservation tube job-id) touch-time))]
-      (assoc tube :reserved reserved'))
+    (let [reservation (find-reservation tube job-id)
+          reserved    (conj (disj (:reserved tube) reservation) (renew reservation touch-time))]
+      (assoc tube :reserved reserved))
     tube))
   
     
@@ -158,9 +158,12 @@
 
 
 (defn- update-tubes
-  "update is a function that accepts a key-value pair"
+  "update is a function that accepts a name-tube pair"
   [state update]
-  (assoc state :tubes (map update (:tubes state))))
+  (let [tubes (:tubes state)]
+    (assoc state 
+           :tubes (zipmap (keys tubes) 
+                          (map #(update (key %) (val %)) tubes)))))
 
 
 (defn- ready?
