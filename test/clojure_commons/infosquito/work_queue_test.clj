@@ -127,3 +127,27 @@
       (touch client job-id))
     (is (= (-> @state :tubes (get "infosquito") :reserved)
            #{(mk-reservation job now)}))))
+
+
+(deftest test-release
+  (let [job-id 0
+        job    (mk-job job-id 10 (json/json-str {}))
+        tubes  {"infosquito" {:ready '() :reserved #{(mk-reservation job 0)}}}
+        state  (atom (assoc default-state :tubes tubes))
+        client (init-client state)]
+    (with-server client
+      (release client job-id))
+    (is (= (-> @state :tubes (get "infosquito"))
+           {:ready (list job) :reserved #{}}))))
+
+
+(deftest test-release-bury
+  (let [job-id 0
+        job    (mk-job job-id 10 (json/json-str {}))
+        tubes  {"infosquito" {:ready '() :reserved #{(mk-reservation job 0)}}}
+        client (init-client (atom (assoc default-state :tubes tubes :bury? true)))
+        thrown (ss/try+
+                 (with-server client (release client job-id))
+                 false
+                 (catch [:type :beanstalkd-oom] {} true))]
+    (is thrown)))

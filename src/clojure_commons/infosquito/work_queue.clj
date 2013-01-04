@@ -26,7 +26,7 @@
                                  deadline-handler]
                           :or   {oom-handler      nop
                                  drain-handler    nop
-                                 buried-handler   nop
+                                 bury-handler     nop
                                  deadline-handler nop}}]
   (letfn [(get-buried-id [error-msg] ((re-find #"BURIED ([0-9]+)" error-msg) 1))]
     (ss/try+
@@ -193,7 +193,11 @@
      :unknown-error - This is thrown if an unidentifiable error occurs."
   [client job-id]
   (assert (has-server? client))
-  (perform-op client beanstalk/release job-id 0 0)
+  (perform-op client 
+              #(beanstalk/release % job-id 0 0) 
+              :bury-handler (fn [id]
+                              (delete client id)
+                              (ss/throw+ {:type :beanstalkd-oom})))
   nil)
 
 

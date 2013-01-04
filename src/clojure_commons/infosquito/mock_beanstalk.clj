@@ -91,7 +91,7 @@
     tube))
   
     
-(defn- release-job
+(defn- release-in-tube
   [tube job-id]
   (if (reserved-in-tube? tube job-id)
     (let [reservation (find-reservation tube job-id)]
@@ -222,6 +222,15 @@
                                   (touch-in-tube tube job-id (:now state))
                                   tube))))
   
+
+(defn- release-job
+  [state job-id]
+  (when-not (reserved? state job-id) (ss/throw+ {:type :not-found}))
+  (update-tubes state
+                (fn [name tube] (if (contains? (:watching state) name)
+                                  (release-in-tube tube job-id)
+                                  tube))))
+  
   
 (defn- use-tube
   [state tube]
@@ -313,6 +322,16 @@
         (validate-open @state-ref)
         (swap! state-ref #(touch-job % id))
         (str "TOUCHED" beanstalk/crlf)
+        (catch [:type :not-found] {}
+          (str "NOT_FOUND" beanstalk/crlf)))))
+  
+  (release [_ id priority delay-time]
+    (locking _
+      (ss/try+
+        (validate-open @state-ref)
+        (when (:bury? @state-ref) (ss/throw+ {:type :protocol :message (str "BURIED " id)}))
+        (swap! state-ref #(release-job % id))
+        (str "RELEASED" beanstalk/crlf)
         (catch [:type :not-found] {}
           (str "NOT_FOUND" beanstalk/crlf))))))
 
