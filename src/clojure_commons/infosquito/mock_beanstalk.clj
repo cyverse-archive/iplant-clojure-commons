@@ -7,37 +7,37 @@
 
 ; JOB
 
-(defn mk-job
+(defn- mk-job
   [id ttr payload]
   {:id      id
    :ttr     ttr
    :payload payload})
 
 
-(defn identifies?
+(defn- identifies?
   [job id]
   (= id (:id job)))
 
 
 ; RESERVATION
 
-(defn mk-reservation
+(defn- mk-reservation
   [job reserve-time]
   {:job job :reserve-time reserve-time})
 
 
-(defn expired?
+(defn- expired?
   [reservation epoch]
   (> epoch 
      (+ (:reserve-time reservation) (:ttr (:job reservation)))))
 
 
-(defn for-job?
+(defn- for-job?
   [reservation job-id]
   (identifies? (:job reservation) job-id))
 
 
-(defn renew
+(defn- renew
   [reservation renewal-time]
   (assoc reservation :reserve-time renewal-time))
 
@@ -53,8 +53,18 @@
   [tube]
   (not (empty? (:ready tube))))
 
-  
+
 (defn- reserved-in-tube?
+  [tube]
+  (not (empty? (:reserved tube))))
+
+
+(defn- jobs-in-tube?
+  [tube]
+  (or (tube-ready? tube) (reserved-in-tube? tube)))
+
+                           
+(defn- job-reserved-in-tube?
   [tube job-id]
   (boolean (some #(for-job? % job-id) (:reserved tube))))
 
@@ -65,6 +75,16 @@
                      (:reserved tube))))
 
 
+(defn- peek-ready-in-tube
+  [tube]
+  (if (tube-ready? tube) (first (:ready tube))))
+  
+  
+(defn- get-reserve-time-in-tube
+  [tube job-id]
+  (:reserve-time (find-reservation tube job-id)))
+
+  
 (defn- put-in-tube
   [tube job]
   (assoc tube :ready (concat (:ready tube) [job])))
@@ -84,7 +104,7 @@
 
 (defn- touch-in-tube
   [tube job-id touch-time]
-  (if (reserved-in-tube? tube job-id)
+  (if (job-reserved-in-tube? tube job-id)
     (let [reservation (find-reservation tube job-id)
           reserved    (conj (disj (:reserved tube) reservation) (renew reservation touch-time))]
       (assoc tube :reserved reserved))
@@ -93,7 +113,7 @@
     
 (defn- release-in-tube
   [tube job-id]
-  (if (reserved-in-tube? tube job-id)
+  (if (job-reserved-in-tube? tube job-id)
     (let [reservation (find-reservation tube job-id)]
       (assoc tube
              :ready    (cons (:job reservation) (:ready tube))
@@ -117,15 +137,15 @@
 
 ; BEANSTALK STATE
 
-(def ^{:private false} default-state {:tubes     {"default" (mk-tube)}
-                                      :using     "default"
-                                      :watching  #{"default"}
-                                      :next-id   0
-                                      :now       0
-                                      :closed?   false
-                                      :oom?      false
-                                      :draining? false
-                                      :bury?     false})
+(def default-state {:tubes     {"default" (mk-tube)}
+                    :using     "default"
+                    :watching  #{"default"}
+                    :next-id   0
+                    :now       0
+                    :closed?   false
+                    :oom?      false
+                    :draining? false
+                    :bury?     false})
 
 
 (defn- validate-open
@@ -169,11 +189,11 @@
 (defn- ready?
   [state]
   (some #(tube-ready? (get-tube state %)) (:watching state)))
-  
+    
 
-(defn- reserved?
+(defn- job-reserved?
   [state job-id]
-  (some #(reserved-in-tube? (get-tube state %) job-id) (:watching state)))
+  (some #(job-reserved-in-tube? (get-tube state %) job-id) (:watching state)))
 
 
 (defn- inc-id
@@ -181,69 +201,108 @@
   (assoc state :next-id (inc (:next-id state))))
 
 
-(defn- advance-time
+(defn advance-time
   [state delta-time]
   (let [now (+ (:now state) delta-time)]
     (update-tubes (assoc state :now now) #(release-expired-jobs %2 now))))
 
 
-(defn- put-job
-  [state job-id ttr payload]
-  (let [tube (:using state)]
-    (update-tube state tube (put-in-tube (get-tube state tube) (mk-job job-id ttr payload)))))
-
-
-(defn- reserve-job
+(defn close
   [state]
-  (loop [[tube-name rem-tubes] (seq (:watching state))]
+  (assoc state :closed? true))
+  
+  
+(defn drain
+  [state]
+  (assoc state :draining? true))
+
+
+(defn set-bury
+  [state bury?]
+  (assoc state :bury? bury?))
+
+  
+(defn set-oom
+  [state oom?]
+  (assoc state :oom? oom?))
+
+
+(defn jobs?
+  [state]
+  (some jobs-in-tube? (vals (:tubes state))))
+  
+  
+(defn peek-ready
+  [state tube-name]
+  (-> state (get-tube tube-name) peek-ready-in-tube))
+
+
+(defn get-reserve-time
+  [state tube-name job-id]
+  (-> state (get-tube tube-name) (get-reserve-time-in-tube job-id)))
+
+  
+(defn put-job
+  [state ttr payload]
+  (let [tube   (:using state)
+        id     (:next-id state)
+        state' (update-tube (inc-id state) 
+                            tube 
+                            (put-in-tube (get-tube state tube) (mk-job id ttr payload)))]
+     [state' id]))
+
+
+(defn reserve-job
+  [state]
+  (loop [[tube-name & rem-tubes] (seq (:watching state))]
     (if-not tube-name
       [state nil]
       (let [tube (get-tube state tube-name)]
         (if (tube-ready? tube)
           (let [[tube' job] (reserve-in-tube tube (:now state))]
-            [(update-tube state tube-name tube') job])
+            [(update-tube state tube-name tube') (dissoc job :ttr)])
           (recur rem-tubes))))))
 
 
-(defn- delete-job
+(defn delete-job
   [state job-id]
-  (when-not (reserved? state job-id) (ss/throw+ {:type :not-found}))
+  (when-not (job-reserved? state job-id) (ss/throw+ {:type :not-found}))
   (update-tubes state 
                 (fn [name tube] (if (contains? (:watching state) name) 
                                   (delete-from-tube tube job-id)
                                   tube))))
 
 
-(defn- touch-job
+(defn touch-job
   [state job-id]
-  (when-not (reserved? state job-id) (ss/throw+ {:type :not-found}))
+  (when-not (job-reserved? state job-id) (ss/throw+ {:type :not-found}))
   (update-tubes state
                 (fn [name tube] (if (contains? (:watching state) name)
                                   (touch-in-tube tube job-id (:now state))
                                   tube))))
   
 
-(defn- release-job
+(defn release-job
   [state job-id]
-  (when-not (reserved? state job-id) (ss/throw+ {:type :not-found}))
+  (when-not (job-reserved? state job-id) (ss/throw+ {:type :not-found}))
   (update-tubes state
                 (fn [name tube] (if (contains? (:watching state) name)
                                   (release-in-tube tube job-id)
                                   tube))))
   
   
-(defn- use-tube
+(defn use-tube
   [state tube]
   (assoc (ensure-tube state tube) :using tube))
 
 
-(defn- watch-tube
+(defn watch-tube
   [state tube]
   (let [state' (ensure-tube state tube)]
     (assoc state' :watching (conj (:watching state') tube))))
 
 
-(defn- ignore-tube
+(defn ignore-tube
   [state tube]
   (assoc state :watching (disj (:watching state) tube)))
 
@@ -255,11 +314,6 @@
     job))
 
 
-(defn advance-time!
-  [state-ref delta-time] 
-  (swap! @state-ref #(advance-time % delta-time)))
-  
-  
 (defrecord ^{:private true} MockBeanstalk [state-ref]
   beanstalk/BeanstalkObject
 
@@ -276,10 +330,12 @@
   (put [_ pri delay-time ttr bytes data]
     (locking _
       (validate-state @state-ref)
-      (let [id  (:next-id @state-ref)]
-        (swap! state-ref inc-id)
-        (when (:bury? @state-ref) (ss/throw+ {:type :protocol :message (str "BURIED " id)}))
-        (swap! state-ref #(put-job % id ttr data))
+      (when (:bury? @state-ref)
+        (let [id  (:next-id @state-ref)]
+          (swap! state-ref inc-id)
+          (ss/throw+ {:type :protocol :message (str "BURIED " id)})))
+      (let [[state' id] (put-job @state-ref ttr data)] 
+        (reset! state-ref state')
         (.notify _)
         (str "INSERTED " id beanstalk/crlf))))
 
