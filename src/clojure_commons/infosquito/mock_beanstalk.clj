@@ -80,6 +80,13 @@
   (if (tube-ready? tube) (first (:ready tube))))
   
   
+(defn- get-jobs-in-tube
+  [tube]
+  (-> #{}
+    (into (:ready tube))
+    (into (map :job (:reserved tube)))))
+
+  
 (defn- get-reserve-time-in-tube
   [tube job-id]
   (:reserve-time (find-reservation tube job-id)))
@@ -235,6 +242,11 @@
 (defn peek-ready
   [state tube-name]
   (-> state (get-tube tube-name) peek-ready-in-tube))
+
+
+(defn get-jobs
+  [state tube-name]
+  (-> state (get-tube tube-name) get-jobs-in-tube))
 
 
 (defn get-reserve-time
