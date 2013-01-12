@@ -20,7 +20,7 @@
 (def ERR_MISSING_QUERY_PARAMETER "ERR_MISSING_QUERY_PARAMETER")
 (def ERR_MISSING_FORM_FIELD      "ERR_MISSING_FORM_FIELD")
 (def ERR_NOT_AUTHORIZED          "ERR_NOT_AUTHORIZED")
-(def ERR_MISSING_QUERY_PARAMETER "ERR_MISSING_QUERY_PARAMETER")
+(def ERR_BAD_QUERY_PARAMETER     "ERR_BAD_QUERY_PARAMETER")
 (def ERR_INCOMPLETE_DELETION     "ERR_INCOMPLETE_DELETION")
 (def ERR_INCOMPLETE_MOVE         "ERR_INCOMPLETE_MOVE")
 (def ERR_INCOMPLETE_RENAME       "ERR_INCOMPLETE_RENAME")
@@ -51,7 +51,7 @@
                 (assoc :action action)
                 (assoc :status "failure")
                 json/json-str)}))
- 
+
 (defn success-resp [action retval]
   (cond
    (= (:status retval) 200)
@@ -63,16 +63,16 @@
    :else
    {:status 200
     :body
-    (cond     
+    (cond
      (map? retval)
      (-> retval
          (assoc :status "success"
                 :action action)
          json/json-str)
-     
+
      (not (string? retval))
      (str retval)
-     
+
      :else retval)}))
 
 (defn format-exception

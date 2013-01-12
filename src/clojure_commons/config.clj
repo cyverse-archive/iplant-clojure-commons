@@ -129,7 +129,7 @@
    Parameters:
        value - the value to convert to a vector."
   [value]
-  (string/split value #", *"))
+  (remove string/blank? (string/split value #", *")))
 
 (defn get-required-vector-prop
   "Gets a required vector property from a set of properties.
@@ -140,6 +140,16 @@
        config-valid - a ref containing a validity flag."
   [props prop-name config-valid]
   (vector-from-prop (get-required-prop props prop-name config-valid)))
+
+(defn get-optional-vector-prop
+  "Gets an optional vector property from a set of properties.
+
+   Parameters:
+       props        - a ref containing the properties.
+       prop-name    - the name of the property.
+       config-valid - a ref containing a validity flag."
+  [props prop-name config-valid]
+  (vector-from-prop (get-optional-prop props prop-name config-valid)))
 
 (defn string-to-int
   "Attempts to convert a String property to an integer property.  Returns zero if the property
@@ -171,6 +181,21 @@
       (record-invalid-prop prop-name e config-valid)
       0)))
 
+(defn string-to-boolean
+  "Attempts to convert a String property to a Boolean property.  Returns false if the property
+   can't be converted.
+
+   Parameters:
+       props        - a ref containing the properties.
+       value        - the value of the property as a string.
+       config-valid - a ref containing a validity flag."
+  [prop-name value config-valid]
+  (try
+    (Boolean/parseBoolean value)
+    (catch Exception e
+      (record-invalid-prop prop-name e config-valid)
+      false)))
+
 (defn get-required-integer-prop
   "Gets a required integer property from a set of properties.  If the property is missing or not
    able to be converted to an integer then the configuration will be marked as invalid and zero
@@ -200,6 +225,21 @@
     (if (string/blank? value)
       0
       (string-to-long prop-name value config-valid))))
+
+(defn get-required-boolean-prop
+  "Gets a required Boolean property from a set of properties.  If a property is missing or not able
+   to be converted to a Boolean then the configuration will be marked as invalid and false will
+   be returned.
+
+   Parameters:
+       props        - a ref containing the properties.
+       prop-name    - the name of a property.
+       config-valid - a ref containing a validity flag."
+  [props prop-name config-valid]
+  (let [value (get-required-prop props prop-name config-valid)]
+    (if (string/blank? value)
+      false
+      (string-to-boolean prop-name value config-valid))))
 
 (defmacro defprop-str
   "defines a required string property.
@@ -258,6 +298,25 @@
         (fn []
           (get-required-vector-prop ~props ~prop-name ~config-valid)))))))
 
+(defmacro defprop-optvec
+  "Defines an optional vector property.
+
+   Parameters:
+       sym          - the symbol to define.
+       desc         - a brief description of the property.
+       props        - a ref containing the properties.
+       config-valid - a ref containing a validity flag.
+       configs      - a ref containing the list of config settings.
+       prop-name    - the name of the property."
+  [sym desc [props config-valid configs] prop-name]
+  `(dosync
+    (alter
+     ~configs conj
+     (def ~sym ~desc
+       (memoize
+        (fn []
+          (get-optional-vector-prop ~props ~prop-name ~config-valid)))))))
+
 (defmacro defprop-int
   "Defines a required integer property.
 
@@ -295,6 +354,25 @@
        (memoize
         (fn []
           (get-required-long-prop ~props ~prop-name ~config-valid)))))))
+
+(defmacro defprop-boolean
+  "Defines a required Boolean property.
+
+   Parameters:
+       sym          - the symbol to define.
+       desc         - a brief description of the property.
+       props        - a ref containing the properties.
+       config-valid - a ref containing a validity flag.
+       configs      - a ref containing the list of config settings.
+       prop-name    - the name of the property."
+  [sym desc [props config-valid configs] prop-name]
+  `(dosync
+    (alter
+     ~configs conj
+     (def ~sym ~desc
+       (memoize
+        (fn []
+          (get-required-boolean-prop ~props ~prop-name ~config-valid)))))))
 
 (defn validate-config
   "Validates a configuration that has been defined and loaded using this library.
