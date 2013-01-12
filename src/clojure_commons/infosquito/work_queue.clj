@@ -1,16 +1,13 @@
 (ns clojure-commons.infosquito.work-queue
-  "This namespace wraps the beanstalk clojure client providing the error
-   handling policies.
+  "This namespace wraps the beanstalk clojure client providing the error handling policies.
 
-   All tasks should be idempotent.
+   All jobs should be idempotent.
 
-   It attempts to remain true to the beanstalkd operations.  Use put to insert a
-   new task.  To remove a task, first reserve it.  When the task is completed,
-   delete it.
+   It attempts to remain true to the beanstalkd operations.  Use put to insert a new job.  To remove 
+   a job, first reserve it.  When the job is completed, delete it.
 
-   All public functions that talk with the assigned beanstalkd, required a
-   client constructed by the mk-client function, and should be called inside of
-   the with-server function.
+   All public functions that talk with the assigned beanstalkd, required a client constructed by the 
+   mk-client function, and should be called inside of the with-server function.
 
    All exceptions use the slingshot extensions."
   (:require [clojure.tools.logging :as log]
@@ -29,13 +26,12 @@
                                  deadline-handler]
                           :or   {oom-handler      nop
                                  drain-handler    nop
-                                 buried-handler   nop
+                                 bury-handler     nop
                                  deadline-handler nop}}]
   (letfn [(get-buried-id [error-msg] ((re-find #"BURIED ([0-9]+)" error-msg) 1))]
     (ss/try+
       (beanstalk-op @(:beanstalk client))
-      (catch [:type :expected_crlf] {:keys []}
-        (ss/throw+ {:type :internal-error}))
+      (catch [:type :expected_crlf] {:keys []} (ss/throw+ {:type :internal-error}))
       (catch [:type :not_found] {keys []})
       (catch [:type :protocol] {:keys [message]}
         (condp #(re-find (re-pattern %1) %2) message
@@ -91,24 +87,27 @@
         (perform-once)))))
 
 
+(defn- has-server?
+  [client]
+  (not= nil @(:beanstalk client)))
+  
+
 (defn mk-client
-  "Constructs the client that manages communications the the assigned beanstalkd
-   server.
+  "Constructs the client that manages communications the the assigned beanstalkd server.
 
    Parameters:
      beanstalk-ctor - This is the constructor for the underlying BeanstalkObject.
-     connect-tries - This is the number of times the client will attempt to
-       connect to beanstalkd before giving up.
-     tast-ttr - This is the number of seconds the client will have to perform a
-       task while reserved.
+     connect-tries - This is the number of times the client will attempt to connect to beanstalkd 
+       before giving up.
+     job-ttr - This is the number of seconds the client will have to perform a job while reserved.
      tube - The name of the tube to use.
 
    Returns:
      It returns a beanstalk client"
-  [beanstalk-ctor connect-tries task-ttr tube]
+  [beanstalk-ctor connect-tries job-ttr tube]
   {:ctor       beanstalk-ctor
    :conn-tries connect-tries
-   :task-ttr   task-ttr
+   :job-ttr    job-ttr
    :tube       tube
    :beanstalk  (atom nil)})
 
@@ -133,52 +132,45 @@
 
 
 (defn delete
-  "Removes a task from beanstalkd.
+  "Removes a job from beanstalkd.
 
    Parameters:
      client - the beanstalkd client
-     task-id - the identifier for the task being removed
+     job-id - the identifier for the job being removed
 
    Preconditions:
      The client is connected to a beanstalkd server.
 
    Throws:
      :connection - This is thrown if it loses its connection to beanstalkd.
-     :internal-error - This is thrown if there is an error in the logic internal
-       to the work queue.
+     :internal-error - This is thrown if there is an error in the logic internal to the work queue.
      :unknown-error - This is thrown if an unidentifiable error occurs."
-  [client task-id]
-  (assert (not= nil @(:beanstalk client)))
-  (perform-op client #(beanstalk/delete % task-id))
+  [client job-id]
+  (assert (has-server? client))
+  (perform-op client #(beanstalk/delete % job-id))
   nil)
 
 
 (defn put
-  "Posts a task to beanstalkd.
+  "Posts a job to beanstalkd.
 
    Parameters:
      client - the beanstalkd client
-     task-str - The serialized task to post
+     job-str - The serialized job to post
 
    Preconditions:
      The client is connected to a beanstalkd server.
 
    Throws:
      :connection - This is thrown if it loses its connection to beanstalkd.
-     :internal-error - This is thrown if there is an error in the logic error
-       internal to the work queue.
+     :internal-error - This is thrown if there is an error in the logic error internal to the work 
+       queue.
      :unknown-error - This is thrown if an unidentifiable error occurs.
      :beanstalkd-oom - This is thrown if beanstalkd is out of memory.
-     :beanstalkd-draining - This is thrown if beanstalkd is draining and not
-       accepting new tasks."
-  [client task-str]
-  (assert (not= nil @(:beanstalk client)))
-  (letfn [(put' [beanstalk] (beanstalk/put beanstalk
-                                           0
-                                           0
-                                           (:task-ttr client)
-                                           (count task-str)
-                                           task-str))]
+     :beanstalkd-draining - This is thrown if beanstalkd is draining and not accepting new jobs."
+  [client job-str]
+  (assert (has-server? client))
+  (letfn [(put' [beanstalk] (beanstalk/put beanstalk 0 0 (:job-ttr client) (count job-str) job-str))]
     (perform-op client put'
       :oom-handler   #(ss/throw+ {:type :beanstalkd-oom})
       :drain-handler #(ss/throw+ {:type :beanstalkd-draining})
@@ -186,28 +178,65 @@
                        (delete client id)
                        (ss/throw+ {:type :beanstalkd-oom})))
     nil))
+  
+
+(defn release
+  "Releases an unfinished job back to beanstalkd.
+
+   Parameters:
+     client - the beanstalk client
+     job-id - the identifier for the job being released
+
+   Throws:
+     :connection - This is thrown if it loses its connection to beanstalkd.
+     :internal-error - This is thrown if there is an error in the logic internal to the work queue.
+     :unknown-error - This is thrown if an unidentifiable error occurs."
+  [client job-id]
+  (assert (has-server? client))
+  (perform-op client 
+              #(beanstalk/release % job-id 0 0) 
+              :bury-handler (fn [id]
+                              (delete client id)
+                              (ss/throw+ {:type :beanstalkd-oom})))
+  nil)
 
 
 (defn reserve
-  "Reserves a task in beanstalkd
+  "Reserves a job in beanstalkd
 
    Parameters:
      client - the beanstalkd client
 
    Returns:
-     It returns the task map.  This map has two elements.  :id holds the task
-     identifier and :payload holds the serialized task.
+     It returns the job map.  This map has two elements.  :id holds the job identifier and :payload 
+     holds the serialized job.
 
    Preconditions:
      The client is connected to a beanstalkd server.
 
    Throws:
      :connection - This is thrown if it loses its connection to beanstalkd.
-     :internal-error - This is thrown if there is an error in the logic error
-       internal to the work queue.
+     :internal-error - This is thrown if there is an error in the logic error internal to the work 
+       queue.
      :unknown-error - This is thrown if an unidentifiable error occurs.
      :beanstalkd-oom - This is thrown if beanstalkd is out of memory."
   [client]
-  (assert (not= nil @(:beanstalk client)))
-  (perform-op client beanstalk/reserve
-    :oom-handler #(ss/throw+ {:type :beanstalkd-oom})))
+  (assert (has-server? client))
+  (perform-op client beanstalk/reserve :oom-handler #(ss/throw+ {:type :beanstalkd-oom})))
+
+
+(defn touch
+  "Tells beanstalkd that a job has not been finished.  This renews the reservation.
+
+   Parameters:
+     client - the beanstalk client
+     job-id - the identifier for the job whose reservation is to be renewed
+
+   Throws:
+     :connection - This is thrown if it loses its connection to beanstalkd.
+     :internal-error - This is thrown if there is an error in the logic internal to the work queue.
+     :unknown-error - This is thrown if an unidentifiable error occurs."
+  [client job-id]
+  (assert (has-server? client))
+  (perform-op client #(beanstalk/touch % job-id))
+  nil)

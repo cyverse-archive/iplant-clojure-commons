@@ -2,26 +2,30 @@
   (:use clojure.test
         clojure-commons.infosquito.work-queue
         clojure-commons.infosquito.mock-beanstalk)
-  (:require [clojure.data.json :as json]
-            [slingshot.slingshot :as ss]))
+  (:require [slingshot.slingshot :as ss]))
+
+
+(def ^{:private true} JOB-TTR 10)
 
 
 (defn- init-tubes
-  [queue-state id payload]
-  (assoc queue-state :tubes {"infosquito" [{:id id :payload payload}]}))
-
+  [queue-state payload]
+  (-> queue-state 
+    (use-tube "infosquito") 
+    (put-job JOB-TTR payload)))
+ 
 
 (defn- init-client
   [& params]
-  (mk-client #(apply mk-mock-beanstalk params) 1 2 "infosquito"))
+  (mk-client #(apply mk-mock-beanstalk params) 1 JOB-TTR "infosquito"))
 
 
 (deftest test-mk-client
   (let [ctor   (fn [])
-        client (mk-client ctor 1 2 "infosquito")]
+        client (mk-client ctor 1 JOB-TTR "infosquito")]
     (is (= ctor (:ctor client)))
     (is (= 1 (:conn-tries client)))
-    (is (= 2 (:task-ttr client)))
+    (is (= JOB-TTR (:job-ttr client)))
     (is (= "infosquito" (:tube client)))
     (is (nil? @(:beanstalk client)))))
 
@@ -34,7 +38,7 @@
 
 
 (deftest test-with-server-bad-connection
-   (let [client (init-client (atom (assoc default-state :closed? true)))
+   (let [client (init-client (atom (close default-state)))
          thrown (ss/try+
                   (with-server client)
                   false
@@ -43,73 +47,104 @@
      (is thrown)))
 
 
-(deftest test-delete
-  (let [state  (atom (init-tubes default-state 0 (json/json-str {})))
-        client (init-client state)]
-    (with-server client (delete client 0))
-    (is (empty? (get "default" (:queue @state))))))
-
-
-(deftest test-delete-bad-connection
-  (let [state  (atom (assoc (init-tubes default-state 0 (json/json-str {}))
-                            :closed? true))
-        client (init-client state)
-        thrown (ss/try+
-                 (with-server client
-                   (swap! state #(assoc % :closed? true))
-                   (delete client 0))
-                 false
-                 (catch [:type :connection] {:keys []}
-                   true))]
-    (is thrown)))
-
-
 (deftest test-put
-  (let [state   (atom default-state)
-        client  (init-client state)
-        payload (json/json-str {})]
-    (with-server client (put client payload))
-    (is (= (get (:tubes @state) "infosquito")
-           [{:id 0 :payload payload}]))))
-
-
-(deftest test-put-oom
-  (let [state  (atom (assoc default-state :oom? true))
-        client (init-client state)
-        thrown (ss/try+
-                 (with-server client (put client (json/json-str {})))
-                 false
-                 (catch [:type :beanstalkd-oom] {:keys []}
-                   true))]
-    (is thrown)))
-
-
-(deftest test-put-drain
-  (let [state  (atom (assoc default-state :draining? true))
-        client (init-client state)
-        thrown (ss/try+
-                 (with-server client (put client (json/json-str {})))
-                 false
-                 (catch [:type :beanstalkd-draining] {:keys []}
-                   true))]
-    (is thrown)))
-
-
-(deftest test-put-bury
-  (let [state  (atom (assoc default-state :bury? true))
-        client (init-client state)
-        thrown (ss/try+
-                 (with-server client (put client (json/json-str {})))
-                 false
-                 (catch [:type :beanstalkd-oom] {:keys []}
-                   true))]
-    (is thrown)))
+  (testing "normal behavior"
+    (let [state   (atom default-state)
+          client  (init-client state)
+          payload "payload"]
+      (with-server client (put client payload))
+      (is (= [payload JOB-TTR] 
+             (map (peek-ready @state "infosquito") [:payload :ttr])))))
+  (testing "out of memory"
+    (let [state   (atom (set-oom default-state true))
+          client  (init-client state)
+          thrown? (ss/try+
+                    (with-server client (put client "payload"))
+                    false
+                    (catch [:type :beanstalkd-oom] {} true))]
+      (is thrown?)))
+  (testing "draining" 
+    (let [state   (atom (drain default-state))
+          client  (init-client state)
+          thrown? (ss/try+
+                    (with-server client (put client "payload"))
+                    false
+                    (catch [:type :beanstalkd-draining] {} true))]
+      (is thrown?)))
+  (testing "buried"
+    (let [state   (atom (set-bury default-state true))
+          client  (init-client state)
+          thrown? (ss/try+
+                    (with-server client (put client "payload"))
+                    false
+                    (catch [:type :beanstalkd-oom] {} true))]
+      (is thrown?))))
 
 
 (deftest test-reserve
-  (let [payload (json/json-str {})
-        state   (atom (init-tubes default-state 0 payload))
-        client  (init-client state)]
+  (let [payload        "payload"
+        [state job-id] (init-tubes default-state payload)
+        client         (init-client (atom state))]
     (with-server client
-      (is (= payload
-             (:payload (reserve client)))))))
+      (is (= {:id job-id :payload payload} (reserve client))))))
+
+
+(deftest test-touch
+  (let [payload     "payload"
+        [s' job-id] (init-tubes default-state payload)
+        state       (-> s'
+                      (watch-tube "infosquito")
+                      reserve-job
+                      first
+                      (advance-time 1)
+                      atom)
+        client     (init-client state)]
+    (with-server client (touch client job-id))
+    (is (= (:now @state)
+           (get-reserve-time @state "infosquito" job-id)))))
+
+
+(deftest test-release
+  (let [[init-state job] (-> default-state
+                           (init-tubes "payload")
+                           first
+                           (watch-tube "infosquito")
+                           reserve-job)
+        job-id           (:id job)]
+    (testing "successful release"
+      (let [state  (atom init-state)
+            client (init-client state)]
+        (with-server client
+          (release client job-id))
+        (is (= job-id (:id (peek-ready @state "infosquito"))))))
+    (testing "buried release"
+      (let [client  (init-client (atom (set-bury init-state true)))
+            thrown? (ss/try+
+                      (with-server client (release client job-id))
+                      false
+                      (catch [:type :beanstalkd-oom] {} true))]
+        (is thrown?)))))
+
+
+(deftest test-delete
+  (let [[init-state job] (-> default-state
+                           (init-tubes "payload")
+                           first
+                           (watch-tube "infosquito")
+                           reserve-job)
+        job-id           (:id job)]
+    (testing "normal behaviour"
+      (let [state  (atom init-state)
+            client (init-client state)]
+        (with-server client (delete client job-id))
+        (is (not (jobs? @state)))))
+    (testing "bad connection"
+      (let [state   (atom init-state)
+            client  (init-client state)
+            thrown? (ss/try+
+                      (with-server client
+                        (swap! state close)
+                        (delete client job-id))
+                      false
+                      (catch [:type :connection-closed] {} true))]
+        (is thrown?)))))
