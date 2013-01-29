@@ -10,5 +10,5 @@
                  [log4j/log4j "1.2.16"]
                  [slingshot "0.10.3"]
                  [org.mongodb/mongo-java-driver "2.6.3"]
-                 [org.apache.httpcomponents/httpclient "4.1.2"]
+                 [org.apache.httpcomponents/httpclient "4.2.2"]
                  [commons-configuration/commons-configuration "1.7"]])
