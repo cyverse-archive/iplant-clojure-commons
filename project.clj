@@ -12,4 +12,5 @@
                  [org.mongodb/mongo-java-driver "2.6.3"]
                  [org.apache.httpcomponents/httpclient "4.2.2"]
                  [commons-configuration/commons-configuration "1.7"]
-                 [cheshire "5.0.1"]])
+                 [cheshire "5.0.1"]]
+  :profiles {:test {:resource-paths ["resources" "test-resources"]}})

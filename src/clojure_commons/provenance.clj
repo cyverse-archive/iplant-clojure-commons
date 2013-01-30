@@ -84,8 +84,8 @@
 
     (-> (call-add-object add-url robj parent-uuid)
         :body
-        (log-map "Register Provenance Object Response: ")
-        (#(cheshire/decode % true)))))
+        (#(cheshire/decode % true))
+        (log-map "Register Provenance Object Response: "))))
 
 (defn lookup
   "Takes in an identifier and looks up the UUID."
