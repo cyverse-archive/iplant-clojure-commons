@@ -5,9 +5,6 @@
   (:require [cemerick.url :as curl]
             [cheshire.core :as cheshire]))
 
-;; TODO: write some unit tests.
-;; SEE: https://github.com/myfreeweb/clj-http-fake
-
 (def ^:private prov-url "http://prov.example.org/")
 
 (defn- echo-request-body

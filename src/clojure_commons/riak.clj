@@ -1,7 +1,7 @@
 (ns clojure-commons.riak
   (:require [cemerick.url :as curl]
-            [clj-http.client :as client]
-            [clojure.data.json :as json]))
+            [cheshire.core :as cheshire]
+            [clj-http.client :as client]))
 
 (defn- mapreduce-url
   "Generates a URL that can be used for Riak MapReduce jobs."
@@ -29,10 +29,11 @@
                  :query  [{:map
                            {:language :javascript
                             :source   "function(riakObject) {return [riakObject.key];}"}}]}]
-       (json/read-json
+       (cheshire/decode
         (:body (client/post (mapreduce-url base)
-                            (merge opts {:body         (json/json-str body)
-                                         :content-type :json})))))))
+                            (merge opts {:body         (cheshire/encode body)
+                                         :content-type :json})))
+        true))))
 
 (defn insert-object
   "Inserts an object into a Riak bucket.
