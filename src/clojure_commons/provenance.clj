@@ -1,7 +1,7 @@
 (ns clojure-commons.provenance
   (:use cemerick.url)
-  (:require [clj-http.client :as client]
-            [clojure.data.json :as json]
+  (:require [cheshire.core :as cheshire]
+            [clj-http.client :as client]
             [clojure.tools.logging :as log]))
 
 (defn prov-map
@@ -38,7 +38,7 @@
    prov-url
    {:throw-exceptions false
     :content-type :json
-    :body (json/json-str lp-map)}))
+    :body (cheshire/encode lp-map)}))
 
 (defn call-add-object
   [prov-url ao-map & [parent-id]]
@@ -48,7 +48,7 @@
      prov-url)
    {:throw-exceptions false
     :content-type :json
-    :body (json/json-str ao-map)}))
+    :body (cheshire/encode ao-map)}))
 
 (defn call-lookup-object
   [prov-url]
@@ -58,7 +58,7 @@
 
 (defn log-map
   [lmap line-header]
-  (log/info (str line-header (json/json-str lmap)))
+  (log/info (str line-header (cheshire/encode lmap)))
   lmap)
 
 (defn log
@@ -70,7 +70,7 @@
   (let [lp-map (clean-prov-map log-map)
         log-url (str (url prov-url "0.1" "log"))]
     (log/warn (str "Provenance URL: " log-url))
-    (log/warn (str "Logging Provenance: " (json/json-str lp-map)))
+    (log/warn (str "Logging Provenance: " (cheshire/encode lp-map)))
     (log/warn (str "Logging Provenance Response: "
                    (call-prov-log log-url lp-map)))))
 
@@ -80,12 +80,12 @@
   [prov-url obj-id name desc & [parent-uuid]]
   (let [robj    {:id obj-id :name name :desc desc}
         add-url (str (url prov-url "0.1" "object"))]
-    (log/info (str "Register Provenance Object: " (json/json-str robj)))
-    
+    (log/info (str "Register Provenance Object: " (cheshire/encode robj)))
+
     (-> (call-add-object add-url robj parent-uuid)
         :body
         (log-map "Register Provenance Object Response: ")
-        json/read-json)))
+        (#(cheshire/decode % true)))))
 
 (defn lookup
   "Takes in an identifier and looks up the UUID."
@@ -93,7 +93,7 @@
   (let [lookup-url (str (url prov-url "0.1" "object"  (url-encode obj-id)))
         resp       (:body (call-lookup-object lookup-url))]
     (println resp)
-    
+
     (if (contains? resp :UUID)
       (:UUID resp)
       nil)))

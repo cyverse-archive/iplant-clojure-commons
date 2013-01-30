@@ -1,5 +1,5 @@
 (ns clojure-commons.mongo
-  (:use    [clojure.data.json :only (read-json)])
+  (:require [cheshire.core :as cheshire])
   (:import [com.mongodb Mongo DB DBCollection BasicDBObject DBCursor]))
 
 ;;; Object translations
@@ -22,9 +22,8 @@
 (defn obj->map
   "Translates a mongodb object to clojure json"
   [mongo-obj]
-  (if-not (nil? mongo-obj)
-    (into {} (read-json (str mongo-obj)))
-    nil))
+  (when-not (nil? mongo-obj)
+    (into {} (cheshire/decode (str mongo-obj) true))))
 
 ;;; More clojure-esque names
 (defn make-connection [host port]
@@ -45,7 +44,7 @@
    to the regular mongo client db.collection.find()"
   ([collection query-json]
      (doall (map obj->map (.toArray (.find collection (map->obj query-json))))))
-  
+
   ([collection query-map fields-map]
      (let [query  (map->obj query-map)
 	   fields (map->obj fields-map)]
@@ -58,7 +57,7 @@
      (let [query (map->obj query-map)
 	   update (map->obj update-map)]
        (obj->map (.findAndModify collection query update))))
-  
+
   ([collection query-map sort-map update-map]
      (let [query (map->obj query-map)
 	   sort (map->obj sort-map)

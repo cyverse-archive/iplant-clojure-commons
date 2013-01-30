@@ -1,7 +1,7 @@
 (ns clojure-commons.error-codes
   (use [slingshot.slingshot :only [try+]])
-  (require [clojure.data.json :as json]
-           [clojure.tools.logging :as log]))
+  (require [clojure.tools.logging :as log]
+           [cheshire.core :as cheshire]))
 
 (defmacro deferr
   [sym]
@@ -49,13 +49,13 @@
      {:status 500
      :body (-> err-obj
              (assoc :status "failure")
-             json/json-str)})
+             cheshire/encode)})
   ([action err-obj]
      {:status 500
       :body (-> err-obj
                 (assoc :action action)
                 (assoc :status "failure")
-                json/json-str)}))
+                cheshire/encode)}))
 
 (defn success-resp [action retval]
   (cond
@@ -73,7 +73,7 @@
      (-> retval
          (assoc :status "success"
                 :action action)
-         json/json-str)
+         cheshire/encode)
 
      (not (string? retval))
      (str retval)
