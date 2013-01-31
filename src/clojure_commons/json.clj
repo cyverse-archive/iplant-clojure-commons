@@ -1,4 +1,5 @@
 (ns clojure-commons.json
+  (:use [clojure.java.io :only [reader]])
   (:require [cheshire.core :as cheshire]))
 
 ;;; Things to make working with POSTs/PUTs easier
@@ -16,4 +17,4 @@
   ([body]
      (body->json body true))
   ([body keywordize?]
-     (cheshire/decode-stream body keywordize?)))
+     (cheshire/decode-stream (reader body) keywordize?)))
