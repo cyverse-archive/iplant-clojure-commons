@@ -55,6 +55,13 @@
       (with-server client (put client payload))
       (is (= [payload JOB-TTR] 
              (map (peek-ready @state "infosquito") [:payload :ttr])))))
+  (testing "normal behavior with multibyte characters"
+    (let [state   (atom default-state)
+          client  (init-client state)
+          payload (str "payload" \u00A0)]
+      (with-server client (put client payload))
+      (is (= [payload JOB-TTR] 
+             (map (peek-ready @state "infosquito") [:payload :ttr])))))
   (testing "out of memory"
     (let [state   (atom (set-oom default-state true))
           client  (init-client state)
