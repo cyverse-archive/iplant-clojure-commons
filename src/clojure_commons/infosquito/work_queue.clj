@@ -170,7 +170,12 @@
      :beanstalkd-draining - This is thrown if beanstalkd is draining and not accepting new jobs."
   [client job-str]
   (assert (has-server? client))
-  (letfn [(put' [beanstalk] (beanstalk/put beanstalk 0 0 (:job-ttr client) (count job-str) job-str))]
+  (letfn [(put' [beanstalk] (beanstalk/put beanstalk 
+                                           0 
+                                           0 
+                                           (:job-ttr client) 
+                                           (count (.getBytes job-str "UTF-8")) 
+                                           job-str))]
     (perform-op client put'
       :oom-handler   #(ss/throw+ {:type :beanstalkd-oom})
       :drain-handler #(ss/throw+ {:type :beanstalkd-draining})
