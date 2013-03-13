@@ -38,7 +38,12 @@
 (deferr ERR_CONFIG_INVALID)
 (deferr ERR_ILLEGAL_ARGUMENT)
 
-(defn error? [obj] (contains? obj :error_code))
+(defn error?
+  [obj]
+  (try
+    (contains? obj :error_code)
+    (catch Exception e
+      false)))
 
 (defn unchecked [throwable-map]
   {:error_code ERR_UNCHECKED_EXCEPTION
