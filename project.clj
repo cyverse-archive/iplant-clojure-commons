@@ -1,6 +1,6 @@
 (defproject org.iplantc/clojure-commons "1.4.1-SNAPSHOT"
   :description "Common Utilities for Clojure Projects"
-  :dependencies [[org.clojure/clojure "1.5.0"]
+  :dependencies [[org.clojure/clojure "1.5.1"]
                  [org.clojure/tools.logging "0.2.6"]
                  [zookeeper-clj "0.9.1"]
                  [clj-http "0.6.5"]
