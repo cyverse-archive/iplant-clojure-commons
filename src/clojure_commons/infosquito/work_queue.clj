@@ -80,11 +80,12 @@
 (defn- perform-op
   [client beanstalk-op & handlers]
   (letfn [(perform-once [] (apply perform-op-once client beanstalk-op handlers))]
-    (ss/try+
-      (perform-once)
-      (catch [:type :unknown-error] {:keys []}
-        (connect! client)
-        (perform-once)))))
+    (locking client
+      (ss/try+
+        (perform-once)
+        (catch [:type :unknown-error] {:keys []}
+          (connect! client)
+          (perform-once))))))
 
 
 (defn- has-server?
@@ -113,8 +114,8 @@
 
 
 (defmacro with-server
-  "This macro connects to a server and executes a sequence of functions.
-   Finally, it closes the connection.
+  "This macro connects to a server and executes a sequence of functions. Finally, it closes the 
+   connection.
 
    Parameters:
      client - The beanstalk client object
@@ -125,10 +126,9 @@
      :connection - This is thrown if it fails to connect to the server."
   [client & ops]
   `(ss/try+
-    (connect! ~client)
+    (locking ~client (connect! ~client))
     (do ~@ops)
-    (finally
-      (close! ~client))))
+    (finally (locking ~client (close! ~client)))))
 
 
 (defn delete
