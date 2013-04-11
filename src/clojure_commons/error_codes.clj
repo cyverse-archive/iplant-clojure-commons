@@ -37,6 +37,15 @@
 (deferr ERR_MISSING_DEPENDENCY)
 (deferr ERR_CONFIG_INVALID)
 (deferr ERR_ILLEGAL_ARGUMENT)
+(deferr ERR_NOT_FOUND)
+
+(def ^:private http-status-for
+  {ERR_ILLEGAL_ARGUMENT 400
+   ERR_NOT_FOUND        404})
+
+(defn- get-http-status
+  [err-code]
+  (get http-status-for err-code 500))
 
 (defn error?
   [obj]
@@ -51,12 +60,12 @@
 
 (defn err-resp
   ([err-obj]
-     {:status 500
-     :body (-> err-obj
-             (assoc :status "failure")
-             cheshire/encode)})
+     {:status (get-http-status (:error_code err-obj))
+      :body (-> err-obj
+                (assoc :status "failure")
+                cheshire/encode)})
   ([action err-obj]
-     {:status 500
+     {:status (get-http-status (:error_code err-obj))
       :body (-> err-obj
                 (assoc :action action)
                 (assoc :status "failure")
