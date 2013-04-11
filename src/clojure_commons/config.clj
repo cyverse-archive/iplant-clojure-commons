@@ -119,9 +119,12 @@
    Parameters:
        props        - a ref containing the properties.
        prop-name    - the name of the property.
-       config-valid - a ref containing a validity flag."
-  [props prop-name config-valid]
-  (get @props prop-name ""))
+       config-valid - a ref containing a validity flag.
+       default      - the default property value."
+  ([props prop-name config-valid]
+     (get @props prop-name ""))
+  ([props prop-name config-valid default]
+     (get @props prop-name default)))
 
 (defn vector-from-prop
   "Derives a list of values from a single comma-delimited value.
@@ -148,8 +151,12 @@
        props        - a ref containing the properties.
        prop-name    - the name of the property.
        config-valid - a ref containing a validity flag."
-  [props prop-name config-valid]
-  (vector-from-prop (get-optional-prop props prop-name config-valid)))
+  ([props prop-name config-valid]
+     (vector-from-prop (get-optional-prop props prop-name config-valid)))
+  ([props prop-name config-valid default]
+     (if-let [string-value (get-optional-prop props prop-name config-valid nil)]
+       (vector-from-prop string-value)
+       default)))
 
 (defn string-to-int
   "Attempts to convert a String property to an integer property.  Returns zero if the property
@@ -211,6 +218,21 @@
       0
       (string-to-int prop-name value config-valid))))
 
+(defn get-optional-integer-prop
+  "Gets an optional integer property from a set of properties.
+
+   Parameters:
+       props        - a ref containing the properties.
+       prop-name    - the name of the property.
+       config-valid - a ref containing the validity flag.
+       default      - the default value."
+  ([props prop-name config-valid]
+     (get-optional-integer-prop props prop-name config-valid 0))
+  ([props prop-name config-valid default]
+     (if-let [string-value (get-optional-prop props prop-name config-valid nil)]
+       (string-to-int prop-name string-value config-valid)
+       default)))
+
 (defn get-required-long-prop
   "Gets a required long property from a set of properties.  If a property is missing or not able to
    be converted to a long then the configuration will be marked as invalid and zero will be
@@ -226,6 +248,21 @@
       0
       (string-to-long prop-name value config-valid))))
 
+(defn get-optional-long-prop
+  "Gets an optional long property from a set of properties.
+
+   Parameters:
+       props        - a ref containing the properties.
+       prop-name    - the name of the property.
+       config-valid - a ref containing the vailidity flag.
+       default      - the default value."
+  ([props prop-name config-valid]
+     (get-optional-long-prop props prop-name config-valid 0))
+  ([props prop-name config-valid default]
+     (if-let [string-value (get-optional-prop props prop-name config-valid nil)]
+       (string-to-long prop-name string-value config-valid)
+       default)))
+
 (defn get-required-boolean-prop
   "Gets a required Boolean property from a set of properties.  If a property is missing or not able
    to be converted to a Boolean then the configuration will be marked as invalid and false will
@@ -240,6 +277,21 @@
     (if (string/blank? value)
       false
       (string-to-boolean prop-name value config-valid))))
+
+(defn get-optional-boolean-prop
+  "Gets an optional Boolean property from a set of properties.
+
+   Parameters:
+       props        - a ref containing the properties.
+       prop-name    - the name of the property.
+       config-valid - a ref containing the vailidity flag.
+       default      - the default value."
+  ([props prop-name config-valid]
+     (get-optional-boolean-prop props prop-name config-valid false))
+  ([props prop-name config-valid default]
+     (if-let [string-value (get-optional-prop props prop-name config-valid nil)]
+       (string-to-boolean prop-name string-value config-valid)
+       default)))
 
 (defmacro defprop-str
   "defines a required string property.
@@ -269,15 +321,18 @@
        props        - a ref containing the properties.
        config-valid - a ref containing a validity flag.
        configs      - a ref containing the list of config settings.
-       prop-name    - the name of the property."
-  [sym desc [props config-valid configs] prop-name]
-  `(dosync
-    (alter
-     ~configs conj
-     (def ~sym ~desc
-       (memoize
-        (fn []
-          (get-optional-prop ~props ~prop-name ~config-valid)))))))
+       prop-name    - the name of the property.
+       default      - the default value."
+  ([sym desc [props config-valid configs] prop-name]
+     `(defprop-optstr ~sym ~desc ~[props config-valid configs] ~prop-name ""))
+  ([sym desc [props config-valid configs] prop-name default]
+     `(dosync
+       (alter
+        ~configs conj
+        (def ~sym ~desc
+          (memoize
+           (fn []
+             (get-optional-prop ~props ~prop-name ~config-valid ~default))))))))
 
 (defmacro defprop-vec
   "Defines a required vector property.
@@ -289,14 +344,14 @@
        config-valid - a ref containing a validity flag.
        configs      - a ref containing the list of config settings.
        prop-name    - the name of the property."
-  [sym desc [props config-valid configs] prop-name]
+  ([sym desc [props config-valid configs] prop-name]
   `(dosync
     (alter
      ~configs conj
      (def ~sym ~desc
        (memoize
         (fn []
-          (get-required-vector-prop ~props ~prop-name ~config-valid)))))))
+          (get-required-vector-prop ~props ~prop-name ~config-valid))))))))
 
 (defmacro defprop-optvec
   "Defines an optional vector property.
@@ -307,15 +362,18 @@
        props        - a ref containing the properties.
        config-valid - a ref containing a validity flag.
        configs      - a ref containing the list of config settings.
-       prop-name    - the name of the property."
-  [sym desc [props config-valid configs] prop-name]
-  `(dosync
-    (alter
-     ~configs conj
-     (def ~sym ~desc
-       (memoize
-        (fn []
-          (get-optional-vector-prop ~props ~prop-name ~config-valid)))))))
+       prop-name    - the name of the property.
+       default      - the default value."
+  ([sym desc [props config-valid configs] prop-name]
+     `(defprop-optvec ~sym ~desc ~[props config-valid configs] ~prop-name []))
+  ([sym desc [props config-valid configs] prop-name default]
+     `(dosync
+       (alter
+        ~configs conj
+        (def ~sym ~desc
+          (memoize
+           (fn []
+             (get-optional-vector-prop ~props ~prop-name ~config-valid ~default))))))))
 
 (defmacro defprop-int
   "Defines a required integer property.
@@ -336,6 +394,27 @@
         (fn []
           (get-required-integer-prop ~props ~prop-name ~config-valid)))))))
 
+(defmacro defprop-optint
+  "Defines an optional integer property.
+
+   Parameters:
+       sym          - the symbol to define.
+       desc         - a brief description of the property.
+       props        - a ref containing the properties.
+       config-valid - a ref containing the validity flag.
+       prop-name    - the name of the property.
+       default      - the default value."
+  ([sym desc [props config-valid configs] prop-name]
+     `(defprop-optint ~sym ~desc ~[props config-valid configs] ~prop-name 0))
+  ([sym desc [props config-valid configs] prop-name default]
+     `(dosync
+       (alter
+        ~configs conj
+        (def ~sym ~desc
+          (memoize
+           (fn []
+             (get-optional-integer-prop ~props ~prop-name ~config-valid ~default))))))))
+
 (defmacro defprop-long
   "Defines a required long property.
 
@@ -355,6 +434,27 @@
         (fn []
           (get-required-long-prop ~props ~prop-name ~config-valid)))))))
 
+(defmacro defprop-optlong
+  "Defined an optional long property.
+
+   Parameters:
+       sym          - the symbol to define.
+       desc         - a brief description of the property.
+       props        - a ref containing the properties.
+       config-valid - a ref containing the validity flag.
+       prop-name    - the name of the property.
+       default      - the default value."
+  ([sym desc [props config-valid configs] prop-name]
+     `(defprop-optlong ~sym ~desc ~[props config-valid configs] ~prop-name 0))
+  ([sym desc [props config-valid configs] prop-name default]
+     `(dosync
+       (alter
+        ~configs conj
+        (def ~sym ~desc
+          (memoize
+           (fn []
+             (get-optional-long-prop ~props ~prop-name ~config-valid ~default))))))))
+
 (defmacro defprop-boolean
   "Defines a required Boolean property.
 
@@ -373,6 +473,27 @@
        (memoize
         (fn []
           (get-required-boolean-prop ~props ~prop-name ~config-valid)))))))
+
+(defmacro defprop-optboolean
+  "Defines an optional Boolean property.
+
+   Parameters:
+       sym          - the symbol to define.
+       desc         - a brief description of the property.
+       props        - a ref containing the properties.
+       config-valid - a ref containing the validity flag.
+       prop-name    - the name of the property.
+       default      - the default value."
+  ([sym desc [props config-valid configs] prop-name]
+     `(defprop-optboolean ~sym ~desc ~[props config-valid configs] ~prop-name false))
+  ([sym desc [props config-valid configs] prop-name default]
+     `(dosync
+       (alter
+        ~configs conj
+        (def ~sym ~desc
+          (memoize
+           (fn []
+             (get-optional-boolean-prop ~props ~prop-name ~config-valid ~default))))))))
 
 (defn validate-config
   "Validates a configuration that has been defined and loaded using this library.
