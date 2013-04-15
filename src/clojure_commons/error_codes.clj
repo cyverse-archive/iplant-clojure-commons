@@ -41,6 +41,7 @@
 
 (def ^:private http-status-for
   {ERR_ILLEGAL_ARGUMENT 400
+   ERR_INVALID_JSON     400
    ERR_NOT_FOUND        404})
 
 (defn- get-http-status
