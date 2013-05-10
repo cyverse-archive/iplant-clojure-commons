@@ -3,10 +3,10 @@
 
    All jobs should be idempotent.
 
-   It attempts to remain true to the beanstalkd operations.  Use put to insert a new job.  To remove 
+   It attempts to remain true to the beanstalkd operations.  Use put to insert a new job.  To remove
    a job, first reserve it.  When the job is completed, delete it.
 
-   All public functions that talk with the assigned beanstalkd, required a client constructed by the 
+   All public functions that talk with the assigned beanstalkd, required a client constructed by the
    mk-client function, and should be called inside of the with-server function.
 
    All exceptions use the slingshot extensions."
@@ -91,14 +91,14 @@
 (defn- has-server?
   [client]
   (not= nil @(:beanstalk client)))
-  
+
 
 (defn mk-client
   "Constructs the client that manages communications the the assigned beanstalkd server.
 
    Parameters:
      beanstalk-ctor - This is the constructor for the underlying BeanstalkObject.
-     connect-tries - This is the number of times the client will attempt to connect to beanstalkd 
+     connect-tries - This is the number of times the client will attempt to connect to beanstalkd
        before giving up.
      job-ttr - This is the number of seconds the client will have to perform a job while reserved.
      tube - The name of the tube to use.
@@ -114,7 +114,7 @@
 
 
 (defmacro with-server
-  "This macro connects to a server and executes a sequence of functions. Finally, it closes the 
+  "This macro connects to a server and executes a sequence of functions. Finally, it closes the
    connection.
 
    Parameters:
@@ -158,23 +158,26 @@
      client - the beanstalkd client
      job-str - The serialized job to post
 
+   Optional Parameters:
+     :delay - the number of seconds to wait before attempting the task
+
    Preconditions:
      The client is connected to a beanstalkd server.
 
    Throws:
      :connection - This is thrown if it loses its connection to beanstalkd.
-     :internal-error - This is thrown if there is an error in the logic error internal to the work 
+     :internal-error - This is thrown if there is an error in the logic error internal to the work
        queue.
      :unknown-error - This is thrown if an unidentifiable error occurs.
      :beanstalkd-oom - This is thrown if beanstalkd is out of memory.
      :beanstalkd-draining - This is thrown if beanstalkd is draining and not accepting new jobs."
-  [client job-str]
+  [client job-str & {:keys [delay] :or {delay 0}}]
   (assert (has-server? client))
-  (letfn [(put' [beanstalk] (beanstalk/put beanstalk 
-                                           0 
-                                           0 
-                                           (:job-ttr client) 
-                                           (count (.getBytes job-str "UTF-8")) 
+  (letfn [(put' [beanstalk] (beanstalk/put beanstalk
+                                           0
+                                           delay
+                                           (:job-ttr client)
+                                           (count (.getBytes job-str "UTF-8"))
                                            job-str))]
     (perform-op client put'
       :oom-handler   #(ss/throw+ {:type :beanstalkd-oom})
@@ -183,7 +186,7 @@
                        (delete client id)
                        (ss/throw+ {:type :beanstalkd-oom})))
     nil))
-  
+
 
 (defn release
   "Releases an unfinished job back to beanstalkd.
@@ -198,8 +201,8 @@
      :unknown-error - This is thrown if an unidentifiable error occurs."
   [client job-id]
   (assert (has-server? client))
-  (perform-op client 
-              #(beanstalk/release % job-id 0 0) 
+  (perform-op client
+              #(beanstalk/release % job-id 0 0)
               :bury-handler (fn [id]
                               (delete client id)
                               (ss/throw+ {:type :beanstalkd-oom})))
@@ -213,7 +216,7 @@
      client - the beanstalkd client
 
    Returns:
-     It returns the job map.  This map has two elements.  :id holds the job identifier and :payload 
+     It returns the job map.  This map has two elements.  :id holds the job identifier and :payload
      holds the serialized job.
 
    Preconditions:
@@ -221,7 +224,7 @@
 
    Throws:
      :connection - This is thrown if it loses its connection to beanstalkd.
-     :internal-error - This is thrown if there is an error in the logic error internal to the work 
+     :internal-error - This is thrown if there is an error in the logic error internal to the work
        queue.
      :unknown-error - This is thrown if an unidentifiable error occurs.
      :beanstalkd-oom - This is thrown if beanstalkd is out of memory."
