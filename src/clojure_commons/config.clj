@@ -293,6 +293,51 @@
        (string-to-boolean prop-name string-value config-valid)
        default)))
 
+(defn define-property
+  "Defines a property. This is a helper function that performs common tasks required by all of the
+   defprop macros.
+
+   Parameters:
+       sym           - the symbol to define.
+       desc          - a brief description of the property.
+       configs       - a ref containing the list of config settings.
+       extraction-fn - the function used to extract the property value."
+  [sym desc configs extraction-fn]
+  `(dosync (alter ~configs conj (def ~sym ~desc (memoize ~extraction-fn)))))
+
+(defn define-required-property
+  "Defines a required property. This is a helper function that performs common tasks required by
+   the macros for required properties.
+
+   Parameters:
+       sym           - the symbol to define.
+       desc          - a brief description of the property.
+       props         - a ref containing the properties.
+       config-valid  - a ref containing the validity flag.
+       configs       - a ref containing the list of config settings.
+       prop-name     - the name of the property.
+       extraction-fn - the function used to extract the property value."
+  [sym desc [props config-valid configs] prop-name extraction-fn]
+  (define-property sym desc configs
+    `(fn [] (~extraction-fn ~props ~prop-name ~config-valid))))
+
+(defn define-optional-property
+  "Defines an optional property. This is a helper function that performs common tasks required by
+   the macros for optional properties.
+
+   Parameters:
+       sym           - the symbol to define.
+       desc          - a brief description of the property.
+       props         - a ref containing the properties.
+       config-valid  - a ref containing the validity flag.
+       configs       - a ref containing the list of config settings.
+       prop-name     - the name of the property.
+       extraction-fn - the function used to extract the property value.
+       default-value - the default value for the property."
+  [sym desc [props config-valid configs] prop-name extraction-fn default-value]
+  (define-property sym desc configs
+    `(fn [] (~extraction-fn ~props ~prop-name ~config-valid ~default-value))))
+
 (defmacro defprop-str
   "defines a required string property.
 
@@ -304,13 +349,8 @@
        configs      - a ref containing the list of config settings.
        prop-name    - the name of the property."
   [sym desc [props config-valid configs] prop-name]
-  `(dosync
-    (alter
-     ~configs conj
-     (def ~sym ~desc
-       (memoize
-        (fn []
-          (get-required-prop ~props ~prop-name ~config-valid)))))))
+  (define-required-property
+    sym desc [props config-valid configs] prop-name get-required-prop))
 
 (defmacro defprop-optstr
   "Defines an optional string property.
@@ -326,13 +366,8 @@
   ([sym desc [props config-valid configs] prop-name]
      `(defprop-optstr ~sym ~desc ~[props config-valid configs] ~prop-name ""))
   ([sym desc [props config-valid configs] prop-name default]
-     `(dosync
-       (alter
-        ~configs conj
-        (def ~sym ~desc
-          (memoize
-           (fn []
-             (get-optional-prop ~props ~prop-name ~config-valid ~default))))))))
+     (define-optional-property
+       sym desc [props config-valid configs] prop-name get-optional-prop default)))
 
 (defmacro defprop-vec
   "Defines a required vector property.
@@ -345,13 +380,8 @@
        configs      - a ref containing the list of config settings.
        prop-name    - the name of the property."
   ([sym desc [props config-valid configs] prop-name]
-  `(dosync
-    (alter
-     ~configs conj
-     (def ~sym ~desc
-       (memoize
-        (fn []
-          (get-required-vector-prop ~props ~prop-name ~config-valid))))))))
+     (define-required-property
+       sym desc [props config-valid configs] prop-name get-required-vector-prop)))
 
 (defmacro defprop-optvec
   "Defines an optional vector property.
@@ -367,13 +397,8 @@
   ([sym desc [props config-valid configs] prop-name]
      `(defprop-optvec ~sym ~desc ~[props config-valid configs] ~prop-name []))
   ([sym desc [props config-valid configs] prop-name default]
-     `(dosync
-       (alter
-        ~configs conj
-        (def ~sym ~desc
-          (memoize
-           (fn []
-             (get-optional-vector-prop ~props ~prop-name ~config-valid ~default))))))))
+     (define-optional-property
+       sym desc [props config-valid configs] prop-name get-optional-vector-prop default)))
 
 (defmacro defprop-int
   "Defines a required integer property.
@@ -386,13 +411,8 @@
        configs      - a ref containing the list of config settings.
        prop-name    - the name of the property."
   [sym desc [props config-valid configs] prop-name]
-  `(dosync
-    (alter
-     ~configs conj
-     (def ~sym ~desc
-       (memoize
-        (fn []
-          (get-required-integer-prop ~props ~prop-name ~config-valid)))))))
+  (define-required-property
+    sym desc [props config-valid configs] prop-name get-required-integer-prop))
 
 (defmacro defprop-optint
   "Defines an optional integer property.
@@ -407,13 +427,8 @@
   ([sym desc [props config-valid configs] prop-name]
      `(defprop-optint ~sym ~desc ~[props config-valid configs] ~prop-name 0))
   ([sym desc [props config-valid configs] prop-name default]
-     `(dosync
-       (alter
-        ~configs conj
-        (def ~sym ~desc
-          (memoize
-           (fn []
-             (get-optional-integer-prop ~props ~prop-name ~config-valid ~default))))))))
+     (define-optional-property
+       sym desc [props config-valid configs] prop-name get-optional-integer-prop default)))
 
 (defmacro defprop-long
   "Defines a required long property.
@@ -426,13 +441,8 @@
        configs      - a ref containing the list of config settings.
        prop-name    - the name of the property."
   [sym desc [props config-valid configs] prop-name]
-  `(dosync
-    (alter
-     ~configs conj
-     (def ~sym ~desc
-       (memoize
-        (fn []
-          (get-required-long-prop ~props ~prop-name ~config-valid)))))))
+  (define-required-property
+    sym desc [props config-valid configs] prop-name get-required-long-prop))
 
 (defmacro defprop-optlong
   "Defined an optional long property.
@@ -447,13 +457,8 @@
   ([sym desc [props config-valid configs] prop-name]
      `(defprop-optlong ~sym ~desc ~[props config-valid configs] ~prop-name 0))
   ([sym desc [props config-valid configs] prop-name default]
-     `(dosync
-       (alter
-        ~configs conj
-        (def ~sym ~desc
-          (memoize
-           (fn []
-             (get-optional-long-prop ~props ~prop-name ~config-valid ~default))))))))
+     (define-optional-property
+       sym desc [props config-valid configs] prop-name get-optional-long-prop default)))
 
 (defmacro defprop-boolean
   "Defines a required Boolean property.
@@ -466,13 +471,8 @@
        configs      - a ref containing the list of config settings.
        prop-name    - the name of the property."
   [sym desc [props config-valid configs] prop-name]
-  `(dosync
-    (alter
-     ~configs conj
-     (def ~sym ~desc
-       (memoize
-        (fn []
-          (get-required-boolean-prop ~props ~prop-name ~config-valid)))))))
+  (define-required-property
+    sym desc [props config-valid configs] prop-name get-required-boolean-prop))
 
 (defmacro defprop-optboolean
   "Defines an optional Boolean property.
@@ -487,13 +487,8 @@
   ([sym desc [props config-valid configs] prop-name]
      `(defprop-optboolean ~sym ~desc ~[props config-valid configs] ~prop-name false))
   ([sym desc [props config-valid configs] prop-name default]
-     `(dosync
-       (alter
-        ~configs conj
-        (def ~sym ~desc
-          (memoize
-           (fn []
-             (get-optional-boolean-prop ~props ~prop-name ~config-valid ~default))))))))
+     (define-optional-property
+       sym desc [props config-valid configs] prop-name get-optional-boolean-prop default)))
 
 (defn validate-config
   "Validates a configuration that has been defined and loaded using this library.
