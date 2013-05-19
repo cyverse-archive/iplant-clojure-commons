@@ -325,8 +325,11 @@
 (deftest enabled-string-correct
   (is (= "Ni!" (enabled-string))))
 
-(deftest disabled-string-not-defined
-  (is (nil? (resolve 'clojure-commons.config-test/disabled-string))))
+(deftest disabled-string-defined
+  (is (resolve 'clojure-commons.config-test/disabled-string)))
+
+(deftest disabled-string-nil
+  (is (nil? (disabled-string))))
 
 (deftest defined-optional-string-defined
   (is (= "blarg" (defined-optional-string))))
@@ -349,11 +352,17 @@
 (deftest enabled-optional-string-with-default-correct
   (is (= "This is an enabled optional string." (enabled-optional-string-with-default))))
 
-(deftest disabled-optional-string-not-defined
-  (is (nil? (resolve 'clojure-commons.config-test/disabled-optional-string))))
+(deftest disabled-optional-string-defined
+  (is (resolve 'clojure-commons.config-test/disabled-optional-string)))
 
-(deftest disabled-optional-string-with-default-not-defined
-  (is (nil? (resolve 'clojure-commons.config-test/disabled-optional-string-with-default))))
+(deftest disabled-optional-string-nil
+  (is (nil? (disabled-optional-string))))
+
+(deftest disabled-optional-string-with-default-defined
+  (is (resolve 'clojure-commons.config-test/disabled-optional-string-with-default)))
+
+(deftest disabled-optional-string-with-default-nil
+  (is (nil? (disabled-optional-string-with-default))))
 
 (deftest required-vector-defined
   (is (= ["foo" "bar" "baz"] (required-vector))))
@@ -364,8 +373,11 @@
 (deftest enabled-vector-correct
   (is (= ["z'bang" "zoom" "boing"] (enabled-vector))))
 
-(deftest disabled-vector-not-defined
-  (is (nil? (resolve 'clojure-commons.config-test/disabled-vector))))
+(deftest disabled-vector-defined
+  (is (resolve 'clojure-commons.config-test/disabled-vector)))
+
+(deftest disabled-vector-nil
+  (is (nil? (disabled-vector))))
 
 (deftest defined-optional-vector-correct
   (is (= ["baz" "bar" "foo"] (defined-optional-vector))))
@@ -388,11 +400,17 @@
 (deftest enabled-optional-vector-with-default-correct
   (is (= (mapv str (range 10)) (enabled-optional-vector-with-default))))
 
-(deftest disabled-optional-vector-not-defined
-  (is (nil? (resolve 'clojure-commons.config-test/disabled-optional-vector))))
+(deftest disabled-optional-vector-defined
+  (is (resolve 'clojure-commons.config-test/disabled-optional-vector)))
 
-(deftest disabled-optional-vector-with-default-not-defined
-  (is (nil? (resolve 'clojure-commons.config-test/disabled-optional-vector-with-default))))
+(deftest disabled-optional-vector-nil
+  (is (nil? (disabled-optional-vector))))
+
+(deftest disabled-optional-vector-with-default-defined
+  (is (resolve 'clojure-commons.config-test/disabled-optional-vector-with-default)))
+
+(deftest disabled-optional-vector-with-default-nil
+  (is (nil? (disabled-optional-vector-with-default))))
 
 (deftest required-int-defined
   (is (= 27 (required-int))))
@@ -403,8 +421,11 @@
 (deftest enabled-int-correct
   (is (= 4 (enabled-int))))
 
-(deftest disabled-int-not-defined
-  (is (nil? (resolve 'clojure-commons.config-test/disabled-int))))
+(deftest disabled-int-defined
+  (is (resolve 'clojure-commons.config-test/disabled-int)))
+
+(deftest disabled-int-nil
+  (is (nil? (disabled-int))))
 
 (deftest defined-optional-int-correct
   (is (= 53 (defined-optional-int))))
@@ -427,11 +448,17 @@
 (deftest enabled-optional-int-with-default-correct
   (is (= 55 (enabled-optional-int-with-default))))
 
-(deftest disabled-optional-int-not-defined
-  (is (nil? (resolve 'clojure-commons.config-test/disabled-optional-int))))
+(deftest disabled-optional-int-defined
+  (is (resolve 'clojure-commons.config-test/disabled-optional-int)))
 
-(deftest disabled-optional-int-with-default-not-defined
-  (is (nil? (resolve 'clojure-commons.config-test/disabled-optional-int-with-default))))
+(deftest disabled-optional-int-nil
+  (is (nil? (disabled-optional-int))))
+
+(deftest disabled-optional-int-with-default-defined
+  (is (resolve 'clojure-commons.config-test/disabled-optional-int-with-default)))
+
+(deftest disabled-optional-int-with-default-nil
+  (is (nil? (disabled-optional-int-with-default))))
 
 (deftest required-long-defined
   (is (= 72 (required-long))))
@@ -442,8 +469,11 @@
 (deftest enabled-long-correct
   (is (= 97 (enabled-long))))
 
-(deftest disabled-long-not-defined
-  (is (nil? (resolve 'disabled-long))))
+(deftest disabled-long-defined
+  (is (resolve 'clojure-commons.config-test/disabled-long)))
+
+(deftest disabled-long-nil
+  (is (nil? (disabled-long))))
 
 (deftest defined-optional-long-correct
   (is (= 35 (defined-optional-long))))
@@ -463,11 +493,17 @@
 (deftest enabled-optional-long-with-default-correct
   (is (= 99 (enabled-optional-long-with-default))))
 
-(deftest disabled-optional-long-not-defined
-  (is (nil? (resolve 'clojure-commons.config-test/disabled-optional-long))))
+(deftest disabled-optional-long-defined
+  (is (resolve 'clojure-commons.config-test/disabled-optional-long)))
 
-(deftest disabled-optional-long-with-default-not-defined
-  (is (nil? (resolve 'clojure-commons.config-test/disabled-optional-long-with-default))))
+(deftest disabled-optional-long-nil
+  (is (nil? (disabled-optional-long))))
+
+(deftest disabled-optional-long-with-default-defined
+  (is (resolve 'clojure-commons.config-test/disabled-optional-long-with-default)))
+
+(deftest disabled-optional-long-with-default-nil
+  (is (nil? (disabled-optional-long-with-default))))
 
 (deftest required-boolean-defined
   (is (true? (required-boolean))))
@@ -478,8 +514,11 @@
 (deftest enabled-boolean-correct
   (is (true? (enabled-boolean))))
 
-(deftest disabled-boolean-not-defined
-  (is (nil? (resolve 'clojure-commons.config-test/disabled-boolean))))
+(deftest disabled-boolean-defined
+  (is (resolve 'clojure-commons.config-test/disabled-boolean)))
+
+(deftest disabled-boolean-nil
+  (is (nil? (disabled-boolean))))
 
 (deftest defined-optional-boolean-defined
   (is (true? (defined-optional-boolean))))
@@ -502,11 +541,17 @@
 (deftest enabled-optional-boolean-with-default-correct
   (is (true? (enabled-optional-boolean-with-default))))
 
-(deftest disabled-optional-boolean-not-defined
-  (is (nil? (resolve 'clojure-commons.config-test/disabled-optional-boolean))))
+(deftest disabled-optional-boolean-defined
+  (is (resolve 'clojure-commons.config-test/disabled-optional-boolean)))
 
-(deftest disabled-optional-boolean-with-default-not-defined
-  (is (nil? (resolve 'clojure-commons.config-test/disabled-optional-boolean-with-default))))
+(deftest disabled-optional-boolean-nil
+  (is (nil? (disabled-optional-boolean))))
+
+(deftest disabled-optional-boolean-with-default-defined
+  (is (resolve 'clojure-commons.config-test/disabled-optional-boolean-with-default)))
+
+(deftest disabled-optional-boolean-with-default-nil
+  (is (nil? (disabled-optional-boolean-with-default))))
 
 (deftest configs-defined
   (is (= [#'enabled-flag

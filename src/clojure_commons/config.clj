@@ -304,8 +304,9 @@
        flag-prop     - the feature flag property determining if the property is relevant.
        extraction-fn - the function used to extract the property value."
   [sym desc configs flag-prop extraction-fn]
-  (when (or (nil? flag-prop) (@(resolve flag-prop)))
-    `(dosync (alter ~configs conj (def ~sym ~desc (memoize ~extraction-fn))))))
+  (if (or (nil? flag-prop) (@(resolve flag-prop)))
+    `(dosync (alter ~configs conj (def ~sym ~desc (memoize ~extraction-fn))))
+    `(def ~sym ~desc (fn [] nil))))
 
 (defn define-required-property
   "Defines a required property. This is a helper function that performs common tasks required by
