@@ -11,26 +11,11 @@
     props))
 
 (def props
-  "The example properties to use for testing."
-  (ref (props-from-map
-        {"enabled-flag"             "true"
-         "disabled-flag"            "false"
-         "foo"                      "bar"
-         "baz"                      "quux"
-         "enabled-string"           "Ni!"
-         "defined-optional-string"  "blarg"
-         "required-vector"          "foo, bar, baz"
-         "enabled-vector"           "z'bang, zoom, boing"
-         "defined-optional-vector"  "baz, bar, foo"
-         "required-int"             "27"
-         "enabled-int"              "4"
-         "defined-optional-int"     "53"
-         "required-long"            "72"
-         "enabled-long"             "97"
-         "defined-optional-long"    "35"
-         "required-boolean"         "true"
-         "enabled-boolean"          "true"
-         "defined-optional-boolean" "true"})))
+  "The example properties to use for testing. Note that the properties aren't actually loaded
+   into the reference until after the configuration settings are defined. This simulates the
+   most common usage, in which a service loads the configuration properties after the namespace
+   that defines the configuration settings has been loaded."
+  (ref nil))
 
 (def config-valid
   "A flag indicating that the configuration is valid."
@@ -331,6 +316,28 @@
   "multiple-disabled-flags"
   "multiple-disabled-flags")
 
+;; The properties can be loaded now that the settings are defined.
+(dosync
+ (ref-set props (props-from-map
+                 {"enabled-flag"             "true"
+                  "disabled-flag"            "false"
+                  "foo"                      "bar"
+                  "baz"                      "quux"
+                  "enabled-string"           "Ni!"
+                  "defined-optional-string"  "blarg"
+                  "required-vector"          "foo, bar, baz"
+                  "enabled-vector"           "z'bang, zoom, boing"
+                  "defined-optional-vector"  "baz, bar, foo"
+                  "required-int"             "27"
+                  "enabled-int"              "4"
+                  "defined-optional-int"     "53"
+                  "required-long"            "72"
+                  "enabled-long"             "97"
+                  "defined-optional-long"    "35"
+                  "required-boolean"         "true"
+                  "enabled-boolean"          "true"
+                  "defined-optional-boolean" "true"})))
+
 (deftest foo-defined
   (is (= "bar" (foo))))
 
@@ -595,40 +602,56 @@
           #'foo
           #'baz
           #'enabled-string
+          #'disabled-string
           #'defined-optional-string
           #'undefined-optional-string
           #'undefined-optional-string-with-default
           #'enabled-optional-string
           #'enabled-optional-string-with-default
+          #'disabled-optional-string
+          #'disabled-optional-string-with-default
           #'required-vector
           #'enabled-vector
+          #'disabled-vector
           #'defined-optional-vector
           #'undefined-optional-vector
           #'undefined-optional-vector-with-default
           #'enabled-optional-vector
           #'enabled-optional-vector-with-default
+          #'disabled-optional-vector
+          #'disabled-optional-vector-with-default
           #'required-int
           #'enabled-int
+          #'disabled-int
           #'defined-optional-int
           #'undefined-optional-int
           #'undefined-optional-int-with-default
           #'enabled-optional-int
           #'enabled-optional-int-with-default
+          #'disabled-optional-int
+          #'disabled-optional-int-with-default
           #'required-long
           #'enabled-long
+          #'disabled-long
           #'defined-optional-long
           #'undefined-optional-long
           #'enabled-optional-long
           #'enabled-optional-long-with-default
+          #'disabled-optional-long
+          #'disabled-optional-long-with-default
           #'required-boolean
           #'enabled-boolean
+          #'disabled-boolean
           #'defined-optional-boolean
           #'undefined-optional-boolean
           #'undefined-optional-boolean-with-default
           #'enabled-optional-boolean
           #'enabled-optional-boolean-with-default
+          #'disabled-optional-boolean
+          #'disabled-optional-boolean-with-default
           #'multiple-enabled-flags
-          #'mixed-feature-flags]
+          #'mixed-feature-flags
+          #'multiple-disabled-flags]
          @configs)))
 
 (deftest initial-configs-valid

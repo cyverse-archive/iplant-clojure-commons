@@ -293,6 +293,21 @@
        (string-to-boolean prop-name string-value config-valid)
        default)))
 
+(defn- wrap-extraction-fn
+  "Places a property extraction function in an appropriate wrapper, depending on whether or not
+   the property is flagged. This function depends on the fact that property validation is done
+   in the extraction function itself. For flagged properties that are disabled, the extraction
+   function is not called when the value is retrieved. Therefore the validation for disabled
+   properties is skipped because the extraction function isn't called.
+
+   Parameters:
+       extraction-fn - the actual extraction function.
+       flag-props    - the feature flag properties determining if the property is relevant."
+  [extraction-fn flag-props]
+  (if (empty? flag-props)
+    `(memoize ~extraction-fn)
+    `(memoize (fn [] (when (some #(%) ~(vec flag-props)) (~extraction-fn))))))
+
 (defn define-property
   "Defines a property. This is a helper function that performs common tasks required by all of the
    defprop macros.
@@ -304,9 +319,8 @@
        flag-props    - the feature flag properties determining if the property is relevant.
        extraction-fn - the function used to extract the property value."
   [sym desc configs flag-props extraction-fn]
-  (if (or (empty? flag-props) (some #(@(resolve %)) flag-props))
-    `(dosync (alter ~configs conj (def ~sym ~desc (memoize ~extraction-fn))))
-    `(def ~sym ~desc (fn [] nil))))
+  (let [wrapped-extraction-fn (wrap-extraction-fn extraction-fn flag-props)]
+    `(dosync (alter ~configs conj (def ~sym ~desc ~wrapped-extraction-fn)))))
 
 (defn define-required-property
   "Defines a required property. This is a helper function that performs common tasks required by
