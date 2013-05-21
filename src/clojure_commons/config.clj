@@ -301,10 +301,10 @@
        sym           - the symbol to define.
        desc          - a brief description of the property.
        configs       - a ref containing the list of config settings.
-       flag-prop     - the feature flag property determining if the property is relevant.
+       flag-props    - the feature flag properties determining if the property is relevant.
        extraction-fn - the function used to extract the property value."
-  [sym desc configs flag-prop extraction-fn]
-  (if (or (nil? flag-prop) (@(resolve flag-prop)))
+  [sym desc configs flag-props extraction-fn]
+  (if (or (empty? flag-props) (some #(@(resolve %)) flag-props))
     `(dosync (alter ~configs conj (def ~sym ~desc (memoize ~extraction-fn))))
     `(def ~sym ~desc (fn [] nil))))
 
@@ -318,11 +318,11 @@
        props         - a ref containing the properties.
        config-valid  - a ref containing the validity flag.
        configs       - a ref containing the list of config settings.
-       flag-prop     - the feature flag property determining if the property is relevant.
+       flag-props    - the feature flag properties determining if the property is relevant.
        prop-name     - the name of the property.
        extraction-fn - the function used to extract the property value."
-  [sym desc [props config-valid configs & [flag-prop]] prop-name extraction-fn]
-  (define-property sym desc configs flag-prop
+  [sym desc [props config-valid configs flag-props] prop-name extraction-fn]
+  (define-property sym desc configs flag-props
     `(fn [] (~extraction-fn ~props ~prop-name ~config-valid))))
 
 (defn define-optional-property
@@ -335,12 +335,12 @@
        props         - a ref containing the properties.
        config-valid  - a ref containing the validity flag.
        configs       - a ref containing the list of config settings.
-       flag-prop     - the feature flag property determining if the property is relevant.
+       flag-props    - the feature flag properties determining if the property is relevant.
        prop-name     - the name of the property.
        extraction-fn - the function used to extract the property value.
        default-value - the default value for the property."
-  [sym desc [props config-valid configs & [flag-prop]] prop-name extraction-fn default-value]
-  (define-property sym desc configs flag-prop
+  [sym desc [props config-valid configs flag-props] prop-name extraction-fn default-value]
+  (define-property sym desc configs flag-props
     `(fn [] (~extraction-fn ~props ~prop-name ~config-valid ~default-value))))
 
 (defmacro defprop-str
@@ -352,11 +352,11 @@
        props        - a ref containing the properties.
        config-valid - a ref containing a validity flag.
        configs      - a ref containing the list of config settings.
-       flag-prop    - the feature flag property determining if the property is relevant.
+       flag-props   - the feature flag properties determining if the property is relevant.
        prop-name    - the name of the property."
-  [sym desc [props config-valid configs & [flag-prop]] prop-name]
+  [sym desc [props config-valid configs & flag-props] prop-name]
   (define-required-property
-    sym desc [props config-valid configs flag-prop] prop-name get-required-prop))
+    sym desc [props config-valid configs flag-props] prop-name get-required-prop))
 
 (defmacro defprop-optstr
   "Defines an optional string property.
@@ -367,14 +367,15 @@
        props        - a ref containing the properties.
        config-valid - a ref containing a validity flag.
        configs      - a ref containing the list of config settings.
-       flag-prop    - the feature flag property determining if the property is relevant.
+       flag-props   - the feature flag properties determining if the property is relevant.
        prop-name    - the name of the property.
        default      - the default value."
-  ([sym desc [props config-valid configs & [flag-prop]] prop-name]
-     `(defprop-optstr ~sym ~desc ~[props config-valid configs flag-prop] ~prop-name ""))
-  ([sym desc [props config-valid configs & [flag-prop]] prop-name default]
+  ([sym desc [props config-valid configs & flag-props] prop-name]
      (define-optional-property
-       sym desc [props config-valid configs flag-prop] prop-name get-optional-prop default)))
+       sym desc [props config-valid configs flag-props] prop-name get-optional-prop ""))
+  ([sym desc [props config-valid configs & flag-props] prop-name default]
+     (define-optional-property
+       sym desc [props config-valid configs flag-props] prop-name get-optional-prop default)))
 
 (defmacro defprop-vec
   "Defines a required vector property.
@@ -385,11 +386,11 @@
        props        - a ref containing the properties.
        config-valid - a ref containing a validity flag.
        configs      - a ref containing the list of config settings.
-       flag-prop    - the feature flag property determining if the property is relevant.
+       flag-props   - the feature flag properties determining if the property is relevant.
        prop-name    - the name of the property."
-  [sym desc [props config-valid configs & [flag-prop]] prop-name]
+  [sym desc [props config-valid configs & flag-props] prop-name]
   (define-required-property
-    sym desc [props config-valid configs flag-prop] prop-name get-required-vector-prop))
+    sym desc [props config-valid configs flag-props] prop-name get-required-vector-prop))
 
 (defmacro defprop-optvec
   "Defines an optional vector property.
@@ -400,14 +401,16 @@
        props        - a ref containing the properties.
        config-valid - a ref containing a validity flag.
        configs      - a ref containing the list of config settings.
-       flag-prop    - the feature flag property determining if the property is relevant.
+       flag-props   - the feature flag properties determining if the property is relevant.
        prop-name    - the name of the property.
        default      - the default value."
-  ([sym desc [props config-valid configs flag-prop] prop-name]
-     `(defprop-optvec ~sym ~desc ~[props config-valid configs flag-prop] ~prop-name []))
-  ([sym desc [props config-valid configs flag-prop] prop-name default]
+  ([sym desc [props config-valid configs & flag-props] prop-name]
      (define-optional-property
-       sym desc [props config-valid configs flag-prop]
+       sym desc [props config-valid configs flag-props]
+       prop-name get-optional-vector-prop []))
+  ([sym desc [props config-valid configs & flag-props] prop-name default]
+     (define-optional-property
+       sym desc [props config-valid configs flag-props]
        prop-name get-optional-vector-prop default)))
 
 (defmacro defprop-int
@@ -419,11 +422,11 @@
        props        - a ref containing the properties.
        config-valid - a ref containing a validity flag.
        configs      - a ref containing the list of config settings.
-       flag-prop    - the feature flag property determining if the property is relevant.
+       flag-props   - the feature flag properties determining if the property is relevant.
        prop-name    - the name of the property."
-  [sym desc [props config-valid configs & [flag-prop]] prop-name]
+  [sym desc [props config-valid configs & flag-props] prop-name]
   (define-required-property
-    sym desc [props config-valid configs flag-prop] prop-name get-required-integer-prop))
+    sym desc [props config-valid configs flag-props] prop-name get-required-integer-prop))
 
 (defmacro defprop-optint
   "Defines an optional integer property.
@@ -433,14 +436,16 @@
        desc         - a brief description of the property.
        props        - a ref containing the properties.
        config-valid - a ref containing the validity flag.
-       flag-prop    - the feature flag property determining if the property is relevant.
+       flag-props   - the feature flag properties determining if the property is relevant.
        prop-name    - the name of the property.
        default      - the default value."
-  ([sym desc [props config-valid configs & [flag-prop]] prop-name]
-     `(defprop-optint ~sym ~desc ~[props config-valid configs flag-prop] ~prop-name 0))
-  ([sym desc [props config-valid configs & [flag-prop]] prop-name default]
+  ([sym desc [props config-valid configs & flag-props] prop-name]
      (define-optional-property
-       sym desc [props config-valid configs flag-prop]
+       sym desc [props config-valid configs flag-props]
+       prop-name get-optional-integer-prop 0))
+  ([sym desc [props config-valid configs & flag-props] prop-name default]
+     (define-optional-property
+       sym desc [props config-valid configs flag-props]
        prop-name get-optional-integer-prop default)))
 
 (defmacro defprop-long
@@ -452,11 +457,11 @@
        props        - a ref containing the properties.
        config-valid - a ref containing a validity flag.
        configs      - a ref containing the list of config settings.
-       flag-prop    - the feature flag property determining if the property is relevant.
+       flag-props   - the feature flag properties determining if the property is relevant.
        prop-name    - the name of the property."
-  [sym desc [props config-valid configs & [flag-prop]] prop-name]
+  [sym desc [props config-valid configs & flag-props] prop-name]
   (define-required-property
-    sym desc [props config-valid configs flag-prop] prop-name get-required-long-prop))
+    sym desc [props config-valid configs flag-props] prop-name get-required-long-prop))
 
 (defmacro defprop-optlong
   "Defined an optional long property.
@@ -467,13 +472,14 @@
        props        - a ref containing the properties.
        config-valid - a ref containing the validity flag.
        prop-name    - the name of the property.
-       flag-prop    - the feature flag property determining if the property is relevant.
+       flag-props   - the feature flag properties determining if the property is relevant.
        default      - the default value."
-  ([sym desc [props config-valid configs & [flag-prop]] prop-name]
-     `(defprop-optlong ~sym ~desc ~[props config-valid configs flag-prop] ~prop-name 0))
-  ([sym desc [props config-valid configs & [flag-prop]] prop-name default]
+  ([sym desc [props config-valid configs & flag-props] prop-name]
      (define-optional-property
-       sym desc [props config-valid configs flag-prop] prop-name get-optional-long-prop default)))
+       sym desc [props config-valid configs flag-props] prop-name get-optional-long-prop 0))
+  ([sym desc [props config-valid configs & flag-props] prop-name default]
+     (define-optional-property
+       sym desc [props config-valid configs flag-props] prop-name get-optional-long-prop default)))
 
 (defmacro defprop-boolean
   "Defines a required Boolean property.
@@ -484,11 +490,11 @@
        props        - a ref containing the properties.
        config-valid - a ref containing a validity flag.
        configs      - a ref containing the list of config settings.
-       flag-prop    - the feature flag property determining if the property is relevant.
+       flag-props   - the feature flag properties determining if the property is relevant.
        prop-name    - the name of the property."
-  [sym desc [props config-valid configs & [flag-prop]] prop-name]
+  [sym desc [props config-valid configs & flag-props] prop-name]
   (define-required-property
-    sym desc [props config-valid configs flag-prop] prop-name get-required-boolean-prop))
+    sym desc [props config-valid configs flag-props] prop-name get-required-boolean-prop))
 
 (defmacro defprop-optboolean
   "Defines an optional Boolean property.
@@ -499,14 +505,16 @@
        props        - a ref containing the properties.
        config-valid - a ref containing the validity flag.
        configs      - a ref containing the list of config settings.
-       flag-prop    - the feature flag property determining if the property is relevant.
+       flag-props   - the feature flag properties determining if the property is relevant.
        prop-name    - the name of the property.
        default      - the default value."
-  ([sym desc [props config-valid configs & [flag-prop]] prop-name]
-     `(defprop-optboolean ~sym ~desc ~[props config-valid configs flag-prop] ~prop-name false))
-  ([sym desc [props config-valid configs & [flag-prop]] prop-name default]
+  ([sym desc [props config-valid configs & flag-props] prop-name]
      (define-optional-property
-       sym desc [props config-valid configs flag-prop]
+       sym desc [props config-valid configs flag-props]
+       prop-name get-optional-boolean-prop false))
+  ([sym desc [props config-valid configs & flag-props] prop-name default]
+     (define-optional-property
+       sym desc [props config-valid configs flag-props]
        prop-name get-optional-boolean-prop default)))
 
 (defn validate-config

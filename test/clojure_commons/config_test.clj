@@ -313,6 +313,24 @@
   "disabled-optional-boolean-with-default"
   true)
 
+(defprop-optstr multiple-enabled-flags
+  "Flagged property with multiple enabled flags."
+  [props config-valid configs enabled-flag enabled-flag]
+  "multiple-enabled-flags"
+  "multiple-enabled-flags")
+
+(defprop-optstr mixed-feature-flags
+  "Flagged property with one disabled flag and one enabled flag."
+  [props config-valid configs enabled-flag disabled-flag]
+  "mixed-feature-flags"
+  "mixed-feature-flags")
+
+(defprop-optstr multiple-disabled-flags
+  "Flagged property with multiple disabled flags."
+  [props config-valid configs disabled-flag disabled-flag]
+  "multiple-disabled-flags"
+  "multiple-disabled-flags")
+
 (deftest foo-defined
   (is (= "bar" (foo))))
 
@@ -553,6 +571,24 @@
 (deftest disabled-optional-boolean-with-default-nil
   (is (nil? (disabled-optional-boolean-with-default))))
 
+(deftest multiple-enabled-flags-defined
+  (is (resolve 'clojure-commons.config-test/multiple-enabled-flags)))
+
+(deftest multiple-enabled-flags-correct
+  (is (= "multiple-enabled-flags" (multiple-enabled-flags))))
+
+(deftest mixed-feature-flags-defined
+  (is (resolve 'clojure-commons.config-test/mixed-feature-flags)))
+
+(deftest mixed-feature-flags-correct
+  (is (= "mixed-feature-flags" (mixed-feature-flags))))
+
+(deftest multiple-disabled-flags-defined
+  (is (resolve 'clojure-commons.config-test/multiple-disabled-flags)))
+
+(deftest multiple-disabled-flags-nil
+  (is (nil? (multiple-disabled-flags))))
+
 (deftest configs-defined
   (is (= [#'enabled-flag
           #'disabled-flag
@@ -590,7 +626,9 @@
           #'undefined-optional-boolean
           #'undefined-optional-boolean-with-default
           #'enabled-optional-boolean
-          #'enabled-optional-boolean-with-default]
+          #'enabled-optional-boolean-with-default
+          #'multiple-enabled-flags
+          #'mixed-feature-flags]
          @configs)))
 
 (deftest initial-configs-valid
