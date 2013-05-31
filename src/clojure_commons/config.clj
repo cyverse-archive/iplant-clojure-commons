@@ -63,7 +63,7 @@
 (defn- log-prop
   "Logs a single configuration setting."
   [[k v]]
-  (let [v (if (re-find #"password" k) (string/replace v #"." "*") v)]
+  (let [v (if (or (re-find #"password" k) (re-find #"pass" k)) (string/replace v #"." "*") v)]
     (log/warn "CONFIG:" k "=" v)))
 
 (defn log-config
