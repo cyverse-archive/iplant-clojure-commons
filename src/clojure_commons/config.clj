@@ -60,19 +60,31 @@
          (System/exit 1))
        (dosync (ref-set props (cl/properties service))))))
 
+(defn masked-field?
+  "Returns a truthy value if the field should be masked and a falsey value if it shouldn't."
+  [field filters]
+  (some #(re-find % field) filters))
+
 (defn- log-prop
   "Logs a single configuration setting."
-  [[k v]]
-  (let [v (if (or (re-find #"password" k) (re-find #"pass" k)) (string/replace v #"." "*") v)]
+  [[k v] filters]
+  (let [v (if (masked-field? k filters) (string/replace v #"." "*") v)]
     (log/warn "CONFIG:" k "=" v)))
 
 (defn log-config
   "Logs the configuration settings.
 
    Parameters:
-       props - the reference to the properties."
-  [props]
-  (dorun (map log-prop (sort-by key @props))))
+       props - the reference to the properties.
+       :filters - list of regexes matching keys in a properties file
+                  whose values should be masked. Defaults to: [#\"passord\" #\"password\"].
+                  The defaults will be added to the :filters list anyway, so you don't need
+                  to specify them."
+  [props & {:keys [filters]
+            :or {filters []}}]
+  (let [all-filters (concat filters [#"password" #"pass"])
+        log-it      #(log-prop % all-filters)]
+    (dorun (map log-it (sort-by key @props)))))
 
 (defn record-missing-prop
   "Records a property that is missing.  Instead of failing on the first missing parameter, we log
