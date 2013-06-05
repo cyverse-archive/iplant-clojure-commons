@@ -68,8 +68,13 @@
 (defn- log-prop
   "Logs a single configuration setting."
   [[k v] filters]
-  (let [v (if (masked-field? k filters) (string/replace v #"." "*") v)]
+  (let [v (if (masked-field? k filters) "********" v)]
     (log/warn "CONFIG:" k "=" v)))
+
+(defn- mask-prop
+  "Masks a single configuration setting, if necessary. Does not log it."
+  [[k v] filters]
+  [k (if (masked-field? k filters) "********" v)])
 
 (defn log-config
   "Logs the configuration settings.
@@ -85,6 +90,18 @@
   (let [all-filters (concat filters [#"password" #"pass"])
         log-it      #(log-prop % all-filters)]
     (dorun (map log-it (sort-by key @props)))))
+
+(defn mask-config
+  "Returns a new configuration map with the appropriate fields masked.
+
+   Parameters:
+       props - the reference to the properties map.
+       :filters - same as what's passed in to (log-config)"
+  [props & {:keys [filters]
+            :or {filters []}}]
+  (let [all-filters (concat filters [#"password" #"pass"])
+        mask-it     #(mask-prop % all-filters)]
+    (into {} (mapv mask-it (sort-by key @props)))))
 
 (defn record-missing-prop
   "Records a property that is missing.  Instead of failing on the first missing parameter, we log
