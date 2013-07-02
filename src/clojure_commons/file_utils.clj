@@ -8,16 +8,19 @@
   10)
 
 (defn path-join
-  "Joins paths together and returns the resulting path as a string."
-  [path & paths]
-  (if (seq paths)
-    (let [path1    path
-          path2    (first paths)
-          new-path (str (file (file path1) path2))]
-      (if (seq (rest paths))
-        (recur new-path (rest paths))
-        new-path))
-    path))
+  "Joins paths together and returns the resulting path as a string. nil and empty strings are 
+   silently discarded.
+
+   Parameters:
+     paths - a parameter list of names to join together to form a path.
+
+   Returns:
+     It returns the path as a string."
+  [& paths]
+  (let [paths' (remove empty? paths)]
+    (if (empty? paths')
+      ""
+      (str (apply file paths')))))
 
 (defn rm-last-slash
   "Returns a new version of 'path' with the last slash removed.
