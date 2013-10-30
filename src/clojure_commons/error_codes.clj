@@ -39,11 +39,13 @@
 (deferr ERR_MISSING_DEPENDENCY)
 (deferr ERR_CONFIG_INVALID)
 (deferr ERR_ILLEGAL_ARGUMENT)
+(deferr ERR_BAD_REQUEST)
 (deferr ERR_NOT_FOUND)
 
 (def ^:private http-status-for
   {ERR_ILLEGAL_ARGUMENT 400
    ERR_INVALID_JSON     400
+   ERR_BAD_REQUEST      400
    ERR_NOT_FOUND        404})
 
 (defn- get-http-status
