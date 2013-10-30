@@ -1,7 +1,8 @@
 (ns clojure-commons.error-codes
-  (use [slingshot.slingshot :only [try+]])
-  (require [clojure.tools.logging :as log]
-           [cheshire.core :as cheshire]))
+  (:use [slingshot.slingshot :only [try+]])
+  (:require [clojure.tools.logging :as log]
+            [cheshire.core :as cheshire]
+            [clojure.string :as string]))
 
 (defmacro deferr
   [sym]
@@ -96,14 +97,24 @@
 
      :else retval)}))
 
+(def filters (ref #{}))
+
+(defn register-filters
+  [new-filters]
+  (dosync
+    (ref-set filters (set (concat @filters new-filters)))))
+
+(defn log-filters [] @filters)
+
 (defn format-exception
   "Formats the exception as a string."
   [exception]
-  (let [string-writer (java.io.StringWriter.)
-        print-writer  (java.io.PrintWriter. string-writer)]
+  (let [string-writer  (java.io.StringWriter.)
+        print-writer   (java.io.PrintWriter. string-writer)]
     (.printStackTrace exception print-writer)
     (let [stack-trace (str string-writer)]
-      (str string-writer))))
+      (reduce #(string/replace %1 %2 "xxxxxxxx") 
+              (cons (str string-writer) (log-filters))))))
 
 (defn trap [action func & args]
   (try+
