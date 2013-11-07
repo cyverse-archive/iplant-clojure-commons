@@ -1,6 +1,16 @@
 (ns clojure-commons.infosquito
-  "This namespace contains a protocol and some types that can will be used by infosquito to
-   interact with a work queue."
+  "This namespace provides some types that can serve as wrappers for clients of various work
+   queues. These types will all implement a single protocol and will thus serve as an abstraction
+   layer that allows us to easily switch to different work queues if necessary.
+
+   Creating a new client should automatically establish a connection to the server. In general,
+   this means that a factory function should be used to generate each type of queue client. The
+   factory function will establish the connection, pass it to the constructor of the appropriate
+   QueueClient implementation, and return the newly created QueueClient implementation.
+
+   Each QueueClient implementation must also implement java.io.Closeable. This allows the
+   implementation to be used within a with-open macro to ensure that the connection to the server
+   is closed cleanly."
   (:require [langohr.core :as rmq]
             [langohr.channel :as lch]
             [langohr.consumers :as lc]
@@ -9,10 +19,14 @@
             [langohr.basic :as lb]))
 
 (defprotocol QueueClient
+
   (publish [this payload]
     "Publishes a message to the queue.")
+
   (subscribe [this handler]
-    "Registers a handler to process messages from the queue."))
+    "Subscribes to the queue. The handler will be called every time a message is retrieved
+     from the queue. This method blocks the calling thread, so it should normally be called
+     from within a dedicated thread."))
 
 (deftype RabbitmqClient [conn channel exchange queue]
 
@@ -42,6 +56,7 @@
    :password pass})
 
 (defn rabbitmq-client
+  "Creates a new RabbitmqClient instance."
   [connection-settings exchange queue]
   (let [conn    (rmq/connect connection-settings)
         channel (lch/open conn)]
