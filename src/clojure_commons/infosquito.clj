@@ -27,6 +27,7 @@
     "Subscribes to the queue. The handler will be called every time a message is retrieved
      from the queue. This method blocks the calling thread, so it should normally be called
      from within a dedicated thread."))
+;; QueueClient
 
 (deftype RabbitmqClient [conn channel exchange queue]
 
