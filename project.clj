@@ -6,7 +6,6 @@
                  [clj-http "0.6.5"]
                  [clj-http-fake "0.4.1"]
                  [com.cemerick/url "0.0.7"]
-                 [com.github.drsnyder/beanstalk "1.0.0-clj14"]
                  [log4j/log4j "1.2.17"]
                  [slingshot "0.10.3"]
                  [org.mongodb/mongo-java-driver "2.10.1"]
