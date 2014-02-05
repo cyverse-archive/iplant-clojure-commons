@@ -22,7 +22,7 @@
                  [commons-configuration/commons-configuration "1.8"]
                  [cheshire "5.0.2"]]
   :repositories [["sonatype-nexus-snapshots"
-                  {:url "https://oss.sonatype.org/content/repositories/snapshots"}]
-                 ["sonatype-nexus-staging"
-                  {:url "https://oss.sonatype.org/service/local/staging/deploy/maven2/"}]]
+                  {:url "https://oss.sonatype.org/content/repositories/snapshots"}]]
+  :deploy-repositories [["sonatype-nexus-staging"
+                         {:url "https://oss.sonatype.org/service/local/staging/deploy/maven2/"}]]
   :profiles {:test {:resource-paths ["resources" "test-resources"]}})
