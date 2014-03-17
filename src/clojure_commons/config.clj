@@ -138,7 +138,7 @@
        config-valid - a ref containing a validity flag."
   [props prop-name config-valid]
   (let [value (get @props prop-name "")]
-    (when (string/blank? value)
+    (when (empty? value)
       (record-missing-prop prop-name config-valid))
     value))
 
