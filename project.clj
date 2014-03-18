@@ -1,11 +1,11 @@
-(defproject org.iplantc/clojure-commons "1.4.8"
+(defproject org.iplantc/clojure-commons "1.4.9"
   :description "Common Utilities for Clojure Projects"
   :url "http://www.iplantcollaborative.org"
   :license {:name "BSD"
             :url "http://iplantcollaborative.org/sites/default/files/iPLANT-LICENSE.txt"}
-  :scm {:connection "scm:git:git@github.com:iPlantCollaborativeOpenSource/metadactyl.git"
-        :developerConnection "scm:git:git@github.com:iPlantCollaborativeOpenSource/metadactyl.git"
-        :url "git@github.com:iPlantCollaborativeOpenSource/metadactyl.git"}
+  :scm {:connection "scm:git:git@github.com:iPlantCollaborativeOpenSource/iplant-clojure-commons.git"
+        :developerConnection "scm:git:git@github.com:iPlantCollaborativeOpenSource/iplant-clojure-commons.git"
+        :url "git@github.com:iPlantCollaborativeOpenSource/iplant-clojure-commons.git"}
   :pom-addition [:developers
                  [:developer
                   [:url "https://github.com/orgs/iPlantCollaborativeOpenSource/teams/iplant-devs"]]]

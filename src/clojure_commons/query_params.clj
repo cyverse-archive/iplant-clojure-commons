@@ -1,5 +1,5 @@
 (ns clojure-commons.query-params
-  (:require [ring.util.codec :as codec]
+  (:require [clj-http.util :as http-util]
             [clojure.string :as string]))
 
 (defn assoc-param
@@ -17,8 +17,9 @@
            val)))
 
 (defn parse-params
-  "Taken from ring.middleware.params. Needed because we need to write
-   a function that uses hidden functions. 
+  "Taken from ring.middleware.params. Needed because we need to write a function that uses hidden
+   functions. We are using clj-http.util/url-decode since ring.util.codec/url-decode does not
+   properly decode '+' characters into spaces.
 
    Parse parame+ters from a string into a map."
   [^String param-string encoding]
@@ -26,8 +27,8 @@
    (fn [param-map encoded-param]
      (if-let [[_ key val] (re-matches #"([^=]+)=(.*)" encoded-param)]
        (assoc-param param-map
-                    (codec/url-decode key encoding)
-                    (codec/url-decode (or val "") encoding))
+                    (http-util/url-decode key encoding)
+                    (http-util/url-decode (or val "") encoding))
        param-map))
    {}
    (string/split param-string #"&")))
